@@ -4,24 +4,24 @@ Shows one heap page of a real PostgreSQL 17 table, read through `pageinspect`.
 
 ## Run it
 
-The compose file is self-contained, so it can be pulled and run from a URL
-with no checkout:
+One command pulls the compose file and starts Postgres and the Inspector. The
+Inspector image is built from source, so the source location must be given:
 
 ```sh
-curl -fsSL <url>/compose.yml | docker compose -f - up -d --wait
+curl -fsSL <url>/compose.yml | GLASSHOUSE_INSPECTOR_CONTEXT=<git-url-or-path-to-inspector> docker compose -f - up -d --build --wait
 ```
 
 Note: `docker compose -f https://...` does not work, because Compose only reads
 local paths. Piping through `-f -` is the form that works.
 
-From a checkout, `make db-up` does the same thing with `compose.yml`.
+Then open http://127.0.0.1:8765/ in a browser. That is the viewer.
 
-Then start the Inspector against it, and open http://127.0.0.1:8765/:
+From a checkout: `make stack-up`, `make stack-down`, `sh adapters/postgres/demo.sh`.
 
-```sh
-make run-postgres                         # or: make run-postgres USE_DOCKER=1
-sh adapters/postgres/demo.sh              # before / after snapshot around an insert
-```
+Security boundary in the container: the Inspector binds 0.0.0.0 inside its own
+container only (`-container`). Both published ports are bound to 127.0.0.1 on
+the host, so nothing on the network can reach them. A host binary still refuses
+any non-loopback bind.
 
 ## How the privilege boundary works
 

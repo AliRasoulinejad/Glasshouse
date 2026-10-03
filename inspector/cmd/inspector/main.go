@@ -31,19 +31,24 @@ func (m *multiFlag) Set(v string) error { *m = append(*m, v); return nil }
 func main() {
 	addr := flag.String("addr", "127.0.0.1:8765", "listen address; must be loopback")
 	adapterName := flag.String("adapter", "mock", "adapter to run: mock | postgres")
+	containerMode := flag.Bool("container", false, "allow binding 0.0.0.0 inside a container; the host must publish on 127.0.0.1 only")
 	var origins multiFlag
 	flag.Var(&origins, "origin", "article origin allowed to call the API (repeatable), e.g. https://example.com")
 	flag.Parse()
 
 	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
-	if err := run(*addr, *adapterName, origins, logger); err != nil {
+	if err := run(*addr, *adapterName, origins, *containerMode, logger); err != nil {
 		logger.Error("inspector stopped", "err", err)
 		os.Exit(1)
 	}
 }
 
-func run(addr, adapterName string, origins []string, logger *slog.Logger) error {
-	if err := server.ValidateAddr(addr); err != nil {
+func run(addr, adapterName string, origins []string, containerMode bool, logger *slog.Logger) error {
+	validateFn := server.ValidateAddr
+	if containerMode {
+		validateFn = server.ValidateContainerAddr
+	}
+	if err := validateFn(addr); err != nil {
 		return err
 	}
 
@@ -79,6 +84,7 @@ func run(addr, adapterName string, origins []string, logger *slog.Logger) error 
 
 	srv, err := server.New(server.Config{
 		Addr:           addr,
+		ContainerMode:  containerMode,
 		AllowedOrigins: origins,
 		Target:         target,
 		Adapter:        a,

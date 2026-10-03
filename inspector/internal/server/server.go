@@ -36,8 +36,13 @@ const heartbeatInterval = 15 * time.Second
 
 // Config is everything the server needs. Adapter and Hub must be non-nil.
 type Config struct {
-	// Addr must be a loopback address such as 127.0.0.1:8765.
+	// Addr must be a loopback address such as 127.0.0.1:8765. In container
+	// mode it may be 0.0.0.0:<port>, because the container's own loopback is
+	// unreachable through Docker's port publishing.
 	Addr string
+	// ContainerMode permits binding 0.0.0.0 inside a container. The host must
+	// still publish the port on 127.0.0.1 only.
+	ContainerMode bool
 	// AllowedOrigins lists the article origins allowed to call the API,
 	// e.g. "https://example.com". Empty means no cross-origin access.
 	AllowedOrigins []string
@@ -61,6 +66,16 @@ type Server struct {
 // ValidateAddr returns an error unless addr is a loopback host:port. It is
 // strict on purpose: there is no override flag.
 func ValidateAddr(addr string) error {
+	return validate(addr, false)
+}
+
+// ValidateContainerAddr is ValidateAddr plus the one extra case container mode
+// needs: 0.0.0.0 on a numeric port. Nothing else is widened.
+func ValidateContainerAddr(addr string) error {
+	return validate(addr, true)
+}
+
+func validate(addr string, container bool) error {
 	host, port, err := net.SplitHostPort(addr)
 	if err != nil {
 		return fmt.Errorf("addr %q: %w", addr, err)
@@ -68,15 +83,25 @@ func ValidateAddr(addr string) error {
 	if _, err := strconv.Atoi(port); err != nil {
 		return fmt.Errorf("addr %q: port must be numeric", addr)
 	}
-	if host != "127.0.0.1" && host != "localhost" {
-		return fmt.Errorf("addr %q: only 127.0.0.1 or localhost may be bound", addr)
+	if host == "127.0.0.1" || host == "localhost" {
+		return nil
 	}
-	return nil
+	if container && host == "0.0.0.0" {
+		return nil
+	}
+	if container {
+		return fmt.Errorf("addr %q: container mode may bind only 0.0.0.0, 127.0.0.1 or localhost", addr)
+	}
+	return fmt.Errorf("addr %q: only 127.0.0.1 or localhost may be bound (use -container inside a container)", addr)
 }
 
 // New validates the config and builds the handler.
 func New(cfg Config) (*Server, error) {
-	if err := ValidateAddr(cfg.Addr); err != nil {
+	validateFn := ValidateAddr
+	if cfg.ContainerMode {
+		validateFn = ValidateContainerAddr
+	}
+	if err := validateFn(cfg.Addr); err != nil {
 		return nil, err
 	}
 	_, port, _ := net.SplitHostPort(cfg.Addr)

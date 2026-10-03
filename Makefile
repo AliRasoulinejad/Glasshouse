@@ -2,9 +2,10 @@
 #
 #   make test          run Go tests (vet + fmt check included)
 #   make run-mock      start the Inspector on the mock adapter
-#   make db-up         start Postgres 17 with pageinspect (adapters/postgres)
-#   make run-postgres  start the Inspector on the Postgres adapter
-#   make demo          before/after snapshot around an insert (needs run-postgres)
+#   make stack-up     start Postgres 17 and the Inspector in containers (builds from source)
+#   make stack-down   stop the stack and delete its data
+#   make run-postgres start the Inspector on the host instead (stop the stack first: same port)
+#   make demo         before/after snapshot around an insert (needs the stack or run-postgres)
 #
 # Go runs on the host by default. If Go is not installed, use Docker:
 #   make test USE_DOCKER=1
@@ -29,7 +30,7 @@ else
   GOFMT = gofmt
 endif
 
-.PHONY: help test vet fmt-check fmt build run-mock run-postgres db-up db-down db-logs demo clean
+.PHONY: help test vet fmt-check fmt build run-mock run-postgres stack-up stack-down stack-logs demo clean
 
 help:
 	@grep -E '^#   make ' Makefile | sed 's/^#   //'
@@ -64,14 +65,16 @@ run-postgres: build
 
 # ---- Postgres ---------------------------------------------------------------
 
-db-up:
-	cd $(PG_DIR) && docker compose up -d --wait
+# The compose file builds the Inspector from this checkout.
+stack-up:
+	cd $(PG_DIR) && GLASSHOUSE_INSPECTOR_CONTEXT=../../$(INSPECTOR_DIR) docker compose -f compose.yml up -d --build --wait
+	@echo "viewer: http://127.0.0.1:8765/"
 
-db-down:
-	cd $(PG_DIR) && docker compose down -v
+stack-down:
+	cd $(PG_DIR) && GLASSHOUSE_INSPECTOR_CONTEXT=../../$(INSPECTOR_DIR) docker compose -f compose.yml down -v
 
-db-logs:
-	cd $(PG_DIR) && docker compose logs --tail=50 postgres
+stack-logs:
+	cd $(PG_DIR) && GLASSHOUSE_INSPECTOR_CONTEXT=../../$(INSPECTOR_DIR) docker compose -f compose.yml logs --tail=50
 
 demo:
 	sh $(PG_DIR)/demo.sh

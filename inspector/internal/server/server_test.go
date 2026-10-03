@@ -108,6 +108,20 @@ func TestValidateAddrRejectsNonLoopback(t *testing.T) {
 	}
 }
 
+func TestContainerModeAllowsOnlyAnyInterfaceExtra(t *testing.T) {
+	if err := ValidateContainerAddr("0.0.0.0:8765"); err != nil {
+		t.Fatalf("container 0.0.0.0 rejected: %v", err)
+	}
+	for _, addr := range []string{"192.168.1.10:8765", "10.0.0.1:8765", "[::]:8765"} {
+		if err := ValidateContainerAddr(addr); err == nil {
+			t.Errorf("container mode accepted %q", addr)
+		}
+	}
+	if err := ValidateAddr("0.0.0.0:8765"); err == nil {
+		t.Fatal("host mode accepted 0.0.0.0")
+	}
+}
+
 func TestNewRejectsNonLoopbackConfig(t *testing.T) {
 	_, err := New(Config{Addr: "0.0.0.0:8765", Adapter: mock.New(time.Hour), Hub: hub.New(10, slog.Default()), Logger: slog.Default()})
 	if err == nil {
