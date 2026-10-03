@@ -58,9 +58,12 @@ type Config struct {
 type Server struct {
 	cfg     Config
 	origins map[string]struct{}
-	hosts   map[string]struct{}
-	actions map[string]adapter.Action
-	mux     *http.ServeMux
+	// selfOrigins are the viewer's own origins. Same-origin POSTs carry an
+	// Origin header, so they must pass the check. They get no CORS headers.
+	selfOrigins map[string]struct{}
+	hosts       map[string]struct{}
+	actions     map[string]adapter.Action
+	mux         *http.ServeMux
 }
 
 // ValidateAddr returns an error unless addr is a loopback host:port. It is
@@ -109,6 +112,10 @@ func New(cfg Config) (*Server, error) {
 	s := &Server{
 		cfg:     cfg,
 		origins: make(map[string]struct{}),
+		selfOrigins: map[string]struct{}{
+			"http://127.0.0.1:" + port: {},
+			"http://localhost:" + port: {},
+		},
 		hosts: map[string]struct{}{
 			"127.0.0.1:" + port: {},
 			"localhost:" + port: {},
@@ -175,6 +182,9 @@ func (s *Server) Run(ctx context.Context) error {
 func (s *Server) originAllowed(r *http.Request) bool {
 	origin := r.Header.Get("Origin")
 	if origin == "" {
+		return true
+	}
+	if _, ok := s.selfOrigins[origin]; ok {
 		return true
 	}
 	_, ok := s.origins[origin]

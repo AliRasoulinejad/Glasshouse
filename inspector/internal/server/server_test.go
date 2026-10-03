@@ -156,6 +156,28 @@ func TestHealthIsOpenToAnyOriginOthersAreNot(t *testing.T) {
 	}
 }
 
+func TestSameOriginViewerIsAllowedWithoutCORS(t *testing.T) {
+	ran := 0
+	s := newTestServer(t, &ran)
+	// The viewer's own origin sends Origin on a same-origin POST.
+	rec := do(t, s, "POST", "/actions/ping", func(r *http.Request) {
+		r.Header.Set(ActionHeader, "1")
+		r.Header.Set("Origin", "http://127.0.0.1:8765")
+	})
+	if rec.Code != http.StatusOK || ran != 1 {
+		t.Fatalf("same-origin action: code=%d ran=%d", rec.Code, ran)
+	}
+	if rec.Header().Get("Access-Control-Allow-Origin") != "" {
+		t.Fatal("self origin should not receive CORS headers")
+	}
+	rec = do(t, s, "GET", "/snapshot", func(r *http.Request) {
+		r.Header.Set("Origin", "http://evil.example:8765")
+	})
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("lookalike origin: got %d, want 403", rec.Code)
+	}
+}
+
 func TestCORSGrantedOnlyToConfiguredOrigin(t *testing.T) {
 	s := newTestServer(t, new(int))
 	rec := do(t, s, "GET", "/snapshot", func(r *http.Request) { r.Header.Set("Origin", testOrigin) })
