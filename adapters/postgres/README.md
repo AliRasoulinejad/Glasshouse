@@ -4,19 +4,24 @@ Shows one heap page of a real PostgreSQL 17 table, read through `pageinspect`.
 
 ## Run it
 
+The compose file is self-contained, so it can be pulled and run from a URL
+with no checkout:
+
 ```sh
-cd adapters/postgres
-docker compose up -d                      # Postgres 17, pageinspect enabled, loopback only
-
-cd ../../inspector
-GLASSHOUSE_PG_DSN='postgres://glasshouse_inspector:glasshouse-local-inspector@127.0.0.1:55432/glasshouse?sslmode=disable' \
-  go run ./cmd/inspector -adapter postgres -origin https://article.example
-
-# in another terminal
-sh adapters/postgres/demo.sh              # before / after snapshot around an insert
+curl -fsSL <url>/compose.yml | docker compose -f - up -d --wait
 ```
 
-Then open http://127.0.0.1:8765/ for the byte-map view.
+Note: `docker compose -f https://...` does not work, because Compose only reads
+local paths. Piping through `-f -` is the form that works.
+
+From a checkout, `make db-up` does the same thing with `compose.yml`.
+
+Then start the Inspector against it, and open http://127.0.0.1:8765/:
+
+```sh
+make run-postgres                         # or: make run-postgres USE_DOCKER=1
+sh adapters/postgres/demo.sh              # before / after snapshot around an insert
+```
 
 ## How the privilege boundary works
 
