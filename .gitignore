@@ -1,1 +1,6 @@
+# build output
+/inspector/bin/
+*.test
+
+# local IDE state (not project config)
 .idea/
