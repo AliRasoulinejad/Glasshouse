@@ -1,0 +1,631 @@
+{
+  "schema_version": 1,
+  "snapshot": {
+    "type": "postgres.heap_page",
+    "source": "postgres",
+    "seq": 20,
+    "timestamp": "2026-10-03T19:51:43.967978624Z",
+    "data": {
+      "relation": "glasshouse_demo",
+      "block": 0,
+      "header": {
+        "lsn": "0/196DE78",
+        "checksum": 0,
+        "flags": 0,
+        "lower": 116,
+        "upper": 6720,
+        "special": 8192,
+        "page_size": 8192,
+        "version": 4,
+        "prune_xid": "0"
+      },
+      "free_space": 6604,
+      "items": [
+        {
+          "lp": 1,
+          "lp_off": 8128,
+          "lp_flags": 1,
+          "lp_len": 61,
+          "t_xmin": "742",
+          "t_xmax": "0",
+          "t_ctid": "(0,1)",
+          "t_infomask2": 2,
+          "t_infomask": 2050,
+          "t_hoff": 24,
+          "t_bits": "",
+          "t_data_hex": "01000000436334636134323338613062"
+        },
+        {
+          "lp": 2,
+          "lp_off": 8064,
+          "lp_flags": 1,
+          "lp_len": 61,
+          "t_xmin": "742",
+          "t_xmax": "0",
+          "t_ctid": "(0,2)",
+          "t_infomask2": 2,
+          "t_infomask": 2050,
+          "t_hoff": 24,
+          "t_bits": "",
+          "t_data_hex": "02000000436338316537323864396434"
+        },
+        {
+          "lp": 3,
+          "lp_off": 8000,
+          "lp_flags": 1,
+          "lp_len": 61,
+          "t_xmin": "742",
+          "t_xmax": "0",
+          "t_ctid": "(0,3)",
+          "t_infomask2": 2,
+          "t_infomask": 2050,
+          "t_hoff": 24,
+          "t_bits": "",
+          "t_data_hex": "03000000436563636263383765346235"
+        },
+        {
+          "lp": 4,
+          "lp_off": 7936,
+          "lp_flags": 1,
+          "lp_len": 57,
+          "t_xmin": "764",
+          "t_xmax": "0",
+          "t_ctid": "(0,4)",
+          "t_infomask2": 2,
+          "t_infomask": 2051,
+          "t_hoff": 24,
+          "t_bits": "01000000",
+          "t_data_hex": "43643135323564306434616639346562"
+        },
+        {
+          "lp": 5,
+          "lp_off": 7872,
+          "lp_flags": 1,
+          "lp_len": 57,
+          "t_xmin": "764",
+          "t_xmax": "0",
+          "t_ctid": "(0,5)",
+          "t_infomask2": 2,
+          "t_infomask": 2051,
+          "t_hoff": 24,
+          "t_bits": "01000000",
+          "t_data_hex": "43373564383463343261343933383533"
+        },
+        {
+          "lp": 6,
+          "lp_off": 7808,
+          "lp_flags": 1,
+          "lp_len": 57,
+          "t_xmin": "764",
+          "t_xmax": "0",
+          "t_ctid": "(0,6)",
+          "t_infomask2": 2,
+          "t_infomask": 2051,
+          "t_hoff": 24,
+          "t_bits": "01000000",
+          "t_data_hex": "43643437623862613634346632346366"
+        },
+        {
+          "lp": 7,
+          "lp_off": 7744,
+          "lp_flags": 1,
+          "lp_len": 57,
+          "t_xmin": "764",
+          "t_xmax": "0",
+          "t_ctid": "(0,7)",
+          "t_infomask2": 2,
+          "t_infomask": 2051,
+          "t_hoff": 24,
+          "t_bits": "01000000",
+          "t_data_hex": "43303461386264666538626630653237"
+        },
+        {
+          "lp": 8,
+          "lp_off": 7680,
+          "lp_flags": 1,
+          "lp_len": 57,
+          "t_xmin": "764",
+          "t_xmax": "0",
+          "t_ctid": "(0,8)",
+          "t_infomask2": 2,
+          "t_infomask": 2051,
+          "t_hoff": 24,
+          "t_bits": "01000000",
+          "t_data_hex": "43376464663335323766656162323230"
+        },
+        {
+          "lp": 9,
+          "lp_off": 7616,
+          "lp_flags": 1,
+          "lp_len": 57,
+          "t_xmin": "764",
+          "t_xmax": "0",
+          "t_ctid": "(0,9)",
+          "t_infomask2": 2,
+          "t_infomask": 2051,
+          "t_hoff": 24,
+          "t_bits": "01000000",
+          "t_data_hex": "43653332643739333065363166336165"
+        },
+        {
+          "lp": 10,
+          "lp_off": 7552,
+          "lp_flags": 1,
+          "lp_len": 57,
+          "t_xmin": "764",
+          "t_xmax": "0",
+          "t_ctid": "(0,10)",
+          "t_infomask2": 2,
+          "t_infomask": 2051,
+          "t_hoff": 24,
+          "t_bits": "01000000",
+          "t_data_hex": "43666566303233303232326239306133"
+        },
+        {
+          "lp": 11,
+          "lp_off": 7488,
+          "lp_flags": 1,
+          "lp_len": 57,
+          "t_xmin": "764",
+          "t_xmax": "0",
+          "t_ctid": "(0,11)",
+          "t_infomask2": 2,
+          "t_infomask": 2051,
+          "t_hoff": 24,
+          "t_bits": "01000000",
+          "t_data_hex": "43313838306466366232623465356631"
+        },
+        {
+          "lp": 12,
+          "lp_off": 7424,
+          "lp_flags": 1,
+          "lp_len": 57,
+          "t_xmin": "764",
+          "t_xmax": "0",
+          "t_ctid": "(0,12)",
+          "t_infomask2": 2,
+          "t_infomask": 2051,
+          "t_hoff": 24,
+          "t_bits": "01000000",
+          "t_data_hex": "43316537336237643836613064336661"
+        },
+        {
+          "lp": 13,
+          "lp_off": 7360,
+          "lp_flags": 1,
+          "lp_len": 57,
+          "t_xmin": "764",
+          "t_xmax": "0",
+          "t_ctid": "(0,13)",
+          "t_infomask2": 2,
+          "t_infomask": 2051,
+          "t_hoff": 24,
+          "t_bits": "01000000",
+          "t_data_hex": "43323433303764636431623239616662"
+        },
+        {
+          "lp": 14,
+          "lp_off": 7296,
+          "lp_flags": 1,
+          "lp_len": 57,
+          "t_xmin": "765",
+          "t_xmax": "0",
+          "t_ctid": "(0,14)",
+          "t_infomask2": 2,
+          "t_infomask": 2051,
+          "t_hoff": 24,
+          "t_bits": "01000000",
+          "t_data_hex": "43346433353434313136633338653233"
+        },
+        {
+          "lp": 15,
+          "lp_off": 7232,
+          "lp_flags": 1,
+          "lp_len": 57,
+          "t_xmin": "765",
+          "t_xmax": "0",
+          "t_ctid": "(0,15)",
+          "t_infomask2": 2,
+          "t_infomask": 2051,
+          "t_hoff": 24,
+          "t_bits": "01000000",
+          "t_data_hex": "43633262366138326661626562366663"
+        },
+        {
+          "lp": 16,
+          "lp_off": 7168,
+          "lp_flags": 1,
+          "lp_len": 57,
+          "t_xmin": "765",
+          "t_xmax": "0",
+          "t_ctid": "(0,16)",
+          "t_infomask2": 2,
+          "t_infomask": 2051,
+          "t_hoff": 24,
+          "t_bits": "01000000",
+          "t_data_hex": "43613534303035393163653262366666"
+        },
+        {
+          "lp": 17,
+          "lp_off": 7104,
+          "lp_flags": 1,
+          "lp_len": 57,
+          "t_xmin": "765",
+          "t_xmax": "0",
+          "t_ctid": "(0,17)",
+          "t_infomask2": 2,
+          "t_infomask": 2051,
+          "t_hoff": 24,
+          "t_bits": "01000000",
+          "t_data_hex": "43326362363639643965323261616538"
+        },
+        {
+          "lp": 18,
+          "lp_off": 7040,
+          "lp_flags": 1,
+          "lp_len": 57,
+          "t_xmin": "765",
+          "t_xmax": "0",
+          "t_ctid": "(0,18)",
+          "t_infomask2": 2,
+          "t_infomask": 2051,
+          "t_hoff": 24,
+          "t_bits": "01000000",
+          "t_data_hex": "43653935653839383637343839343533"
+        },
+        {
+          "lp": 19,
+          "lp_off": 6976,
+          "lp_flags": 1,
+          "lp_len": 57,
+          "t_xmin": "765",
+          "t_xmax": "0",
+          "t_ctid": "(0,19)",
+          "t_infomask2": 2,
+          "t_infomask": 2051,
+          "t_hoff": 24,
+          "t_bits": "01000000",
+          "t_data_hex": "43363332666136376463346336653937"
+        },
+        {
+          "lp": 20,
+          "lp_off": 6912,
+          "lp_flags": 1,
+          "lp_len": 57,
+          "t_xmin": "765",
+          "t_xmax": "0",
+          "t_ctid": "(0,20)",
+          "t_infomask2": 2,
+          "t_infomask": 2051,
+          "t_hoff": 24,
+          "t_bits": "01000000",
+          "t_data_hex": "43323731643365363937633539303833"
+        },
+        {
+          "lp": 21,
+          "lp_off": 6848,
+          "lp_flags": 1,
+          "lp_len": 57,
+          "t_xmin": "765",
+          "t_xmax": "0",
+          "t_ctid": "(0,21)",
+          "t_infomask2": 2,
+          "t_infomask": 2051,
+          "t_hoff": 24,
+          "t_bits": "01000000",
+          "t_data_hex": "43623637633236333739383662653830"
+        },
+        {
+          "lp": 22,
+          "lp_off": 6784,
+          "lp_flags": 1,
+          "lp_len": 57,
+          "t_xmin": "765",
+          "t_xmax": "0",
+          "t_ctid": "(0,22)",
+          "t_infomask2": 2,
+          "t_infomask": 2051,
+          "t_hoff": 24,
+          "t_bits": "01000000",
+          "t_data_hex": "43616332326562376232666239623035"
+        },
+        {
+          "lp": 23,
+          "lp_off": 6720,
+          "lp_flags": 1,
+          "lp_len": 57,
+          "t_xmin": "765",
+          "t_xmax": "0",
+          "t_ctid": "(0,23)",
+          "t_infomask2": 2,
+          "t_infomask": 2051,
+          "t_hoff": 24,
+          "t_bits": "01000000",
+          "t_data_hex": "43646265623639613738626266633135"
+        }
+      ]
+    }
+  },
+  "events": [
+    {
+      "id": "postgres:1",
+      "seq": 1,
+      "timestamp": "2026-10-03T19:23:35.542283389Z",
+      "source": "postgres",
+      "kind": "tuple_inserted",
+      "detail": {
+        "free_space": 7284,
+        "lp": 4,
+        "lp_len": 57,
+        "lp_off": 7936,
+        "t_xmin": "764"
+      }
+    },
+    {
+      "id": "postgres:2",
+      "seq": 2,
+      "timestamp": "2026-10-03T19:23:35.542283389Z",
+      "source": "postgres",
+      "kind": "tuple_inserted",
+      "detail": {
+        "free_space": 7284,
+        "lp": 5,
+        "lp_len": 57,
+        "lp_off": 7872,
+        "t_xmin": "764"
+      }
+    },
+    {
+      "id": "postgres:3",
+      "seq": 3,
+      "timestamp": "2026-10-03T19:23:35.542283389Z",
+      "source": "postgres",
+      "kind": "tuple_inserted",
+      "detail": {
+        "free_space": 7284,
+        "lp": 6,
+        "lp_len": 57,
+        "lp_off": 7808,
+        "t_xmin": "764"
+      }
+    },
+    {
+      "id": "postgres:4",
+      "seq": 4,
+      "timestamp": "2026-10-03T19:23:35.542283389Z",
+      "source": "postgres",
+      "kind": "tuple_inserted",
+      "detail": {
+        "free_space": 7284,
+        "lp": 7,
+        "lp_len": 57,
+        "lp_off": 7744,
+        "t_xmin": "764"
+      }
+    },
+    {
+      "id": "postgres:5",
+      "seq": 5,
+      "timestamp": "2026-10-03T19:23:35.542283389Z",
+      "source": "postgres",
+      "kind": "tuple_inserted",
+      "detail": {
+        "free_space": 7284,
+        "lp": 8,
+        "lp_len": 57,
+        "lp_off": 7680,
+        "t_xmin": "764"
+      }
+    },
+    {
+      "id": "postgres:6",
+      "seq": 6,
+      "timestamp": "2026-10-03T19:23:35.542283389Z",
+      "source": "postgres",
+      "kind": "tuple_inserted",
+      "detail": {
+        "free_space": 7284,
+        "lp": 9,
+        "lp_len": 57,
+        "lp_off": 7616,
+        "t_xmin": "764"
+      }
+    },
+    {
+      "id": "postgres:7",
+      "seq": 7,
+      "timestamp": "2026-10-03T19:23:35.542283389Z",
+      "source": "postgres",
+      "kind": "tuple_inserted",
+      "detail": {
+        "free_space": 7284,
+        "lp": 10,
+        "lp_len": 57,
+        "lp_off": 7552,
+        "t_xmin": "764"
+      }
+    },
+    {
+      "id": "postgres:8",
+      "seq": 8,
+      "timestamp": "2026-10-03T19:23:35.542283389Z",
+      "source": "postgres",
+      "kind": "tuple_inserted",
+      "detail": {
+        "free_space": 7284,
+        "lp": 11,
+        "lp_len": 57,
+        "lp_off": 7488,
+        "t_xmin": "764"
+      }
+    },
+    {
+      "id": "postgres:9",
+      "seq": 9,
+      "timestamp": "2026-10-03T19:23:35.542283389Z",
+      "source": "postgres",
+      "kind": "tuple_inserted",
+      "detail": {
+        "free_space": 7284,
+        "lp": 12,
+        "lp_len": 57,
+        "lp_off": 7424,
+        "t_xmin": "764"
+      }
+    },
+    {
+      "id": "postgres:10",
+      "seq": 10,
+      "timestamp": "2026-10-03T19:23:35.542283389Z",
+      "source": "postgres",
+      "kind": "tuple_inserted",
+      "detail": {
+        "free_space": 7284,
+        "lp": 13,
+        "lp_len": 57,
+        "lp_off": 7360,
+        "t_xmin": "764"
+      }
+    },
+    {
+      "id": "postgres:11",
+      "seq": 11,
+      "timestamp": "2026-10-03T19:23:41.042279094Z",
+      "source": "postgres",
+      "kind": "tuple_inserted",
+      "detail": {
+        "free_space": 6604,
+        "lp": 14,
+        "lp_len": 57,
+        "lp_off": 7296,
+        "t_xmin": "765"
+      }
+    },
+    {
+      "id": "postgres:12",
+      "seq": 12,
+      "timestamp": "2026-10-03T19:23:41.042279094Z",
+      "source": "postgres",
+      "kind": "tuple_inserted",
+      "detail": {
+        "free_space": 6604,
+        "lp": 15,
+        "lp_len": 57,
+        "lp_off": 7232,
+        "t_xmin": "765"
+      }
+    },
+    {
+      "id": "postgres:13",
+      "seq": 13,
+      "timestamp": "2026-10-03T19:23:41.042279094Z",
+      "source": "postgres",
+      "kind": "tuple_inserted",
+      "detail": {
+        "free_space": 6604,
+        "lp": 16,
+        "lp_len": 57,
+        "lp_off": 7168,
+        "t_xmin": "765"
+      }
+    },
+    {
+      "id": "postgres:14",
+      "seq": 14,
+      "timestamp": "2026-10-03T19:23:41.042279094Z",
+      "source": "postgres",
+      "kind": "tuple_inserted",
+      "detail": {
+        "free_space": 6604,
+        "lp": 17,
+        "lp_len": 57,
+        "lp_off": 7104,
+        "t_xmin": "765"
+      }
+    },
+    {
+      "id": "postgres:15",
+      "seq": 15,
+      "timestamp": "2026-10-03T19:23:41.042279094Z",
+      "source": "postgres",
+      "kind": "tuple_inserted",
+      "detail": {
+        "free_space": 6604,
+        "lp": 18,
+        "lp_len": 57,
+        "lp_off": 7040,
+        "t_xmin": "765"
+      }
+    },
+    {
+      "id": "postgres:16",
+      "seq": 16,
+      "timestamp": "2026-10-03T19:23:41.042279094Z",
+      "source": "postgres",
+      "kind": "tuple_inserted",
+      "detail": {
+        "free_space": 6604,
+        "lp": 19,
+        "lp_len": 57,
+        "lp_off": 6976,
+        "t_xmin": "765"
+      }
+    },
+    {
+      "id": "postgres:17",
+      "seq": 17,
+      "timestamp": "2026-10-03T19:23:41.042279094Z",
+      "source": "postgres",
+      "kind": "tuple_inserted",
+      "detail": {
+        "free_space": 6604,
+        "lp": 20,
+        "lp_len": 57,
+        "lp_off": 6912,
+        "t_xmin": "765"
+      }
+    },
+    {
+      "id": "postgres:18",
+      "seq": 18,
+      "timestamp": "2026-10-03T19:23:41.042279094Z",
+      "source": "postgres",
+      "kind": "tuple_inserted",
+      "detail": {
+        "free_space": 6604,
+        "lp": 21,
+        "lp_len": 57,
+        "lp_off": 6848,
+        "t_xmin": "765"
+      }
+    },
+    {
+      "id": "postgres:19",
+      "seq": 19,
+      "timestamp": "2026-10-03T19:23:41.042279094Z",
+      "source": "postgres",
+      "kind": "tuple_inserted",
+      "detail": {
+        "free_space": 6604,
+        "lp": 22,
+        "lp_len": 57,
+        "lp_off": 6784,
+        "t_xmin": "765"
+      }
+    },
+    {
+      "id": "postgres:20",
+      "seq": 20,
+      "timestamp": "2026-10-03T19:23:41.042279094Z",
+      "source": "postgres",
+      "kind": "tuple_inserted",
+      "detail": {
+        "free_space": 6604,
+        "lp": 23,
+        "lp_len": 57,
+        "lp_off": 6720,
+        "t_xmin": "765"
+      }
+    }
+  ]
+}
