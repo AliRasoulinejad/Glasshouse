@@ -63,21 +63,15 @@ function treeDiagram(indexPages) {
   wrap.className = 'index-tree';
   const elementsByBlock = new Map();
 
-  const byLevel = new Map();
+  // All pages sit in one row, side by side, in walk order (root first,
+  // then each level's children) — the connector lines (drawConnectors)
+  // are what show the tree shape, not the boxes' row/column position.
+  const row = document.createElement('div');
+  row.className = 'index-level';
   for (const page of indexPages.pages) {
-    if (!byLevel.has(page.level)) byLevel.set(page.level, []);
-    byLevel.get(page.level).push(page);
+    row.append(pageBox(page, elementsByBlock));
   }
-  const levels = [...byLevel.keys()].sort((a, b) => b - a);
-
-  for (const level of levels) {
-    const row = document.createElement('div');
-    row.className = 'index-level';
-    for (const page of byLevel.get(level)) {
-      row.append(pageBox(page, elementsByBlock));
-    }
-    wrap.append(row);
-  }
+  wrap.append(row);
 
   if (indexPages.truncated) {
     const note = document.createElement('p');
@@ -128,24 +122,15 @@ registerView('postgres.heap_and_index', {
     const wrap = document.createElement('div');
     wrap.className = 'heap-and-index';
 
-    const heapCol = document.createElement('div');
-    heapCol.className = 'heap-and-index-col';
-    const heapHeading = document.createElement('h3');
-    heapHeading.style.margin = '0 0 8px';
-    heapHeading.textContent = 'Heap page';
     const heapSection = document.createElement('div');
     renderHeapSection(heapSection, data.heap, focus?.detail?.lp ?? null);
-    heapCol.append(heapHeading, heapSection);
 
-    const indexCol = document.createElement('div');
-    indexCol.className = 'heap-and-index-col';
     const indexHeading = document.createElement('h3');
-    indexHeading.style.margin = '0 0 8px';
+    indexHeading.style.margin = '20px 0 8px';
     indexHeading.textContent = `Index: ${data.index.index_name}`;
-    const treeWrap = treeDiagram(data.index);
-    indexCol.append(indexHeading, treeWrap.element);
 
-    wrap.append(heapCol, indexCol);
+    const treeWrap = treeDiagram(data.index);
+    wrap.append(heapSection, indexHeading, treeWrap.element);
     container.replaceChildren(wrap);
     drawConnectors(treeWrap);
   },
