@@ -65,3 +65,13 @@ The handover draft was the starting point. These additions are deliberate:
 
 Each adapter ships a static sample in `samples/` matching this envelope
 exactly, with `schema_version` set. The Website reads these with zero setup.
+
+## Adapter-specific shapes
+
+`snapshot.data`'s shape is fixed per `snapshot.type`, documented as Go types
+next to each adapter — this table is just a map to them:
+
+| Type | Shape | Defined in |
+| --- | --- | --- |
+| `postgres.heap_page` | `{relation, pages: [{block, header, free_space, items}]}` | `inspector/internal/adapter/postgres/heappage.go` |
+| `postgres.heap_and_index` | `{relation, heap: <postgres.heap_page's data>, index: {index_name, pages: [{block, level, type, items}], truncated}}` | `inspector/internal/adapter/postgres/btreepage.go` |

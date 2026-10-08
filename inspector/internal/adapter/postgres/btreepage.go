@@ -5,6 +5,11 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	"glasshouse/inspector/internal/adapter"
 )
 
 // IndexItem is one entry on a B-tree index page. On an internal or root page,
@@ -134,4 +139,108 @@ func walkIndex(
 	}
 
 	return IndexPages{IndexName: indexName, Pages: pages, Truncated: truncated}, nil
+}
+
+// TypeHeapAndIndex is the snapshot type emitted by WithIndexAdapter.
+const TypeHeapAndIndex = "postgres.heap_and_index"
+
+// HeapAndIndex is the snapshot payload: the demo table's heap pages and its
+// payload index's pages, read in the same poll.
+type HeapAndIndex struct {
+	Relation string     `json:"relation"`
+	Heap     HeapPages  `json:"heap"`
+	Index    IndexPages `json:"index"`
+}
+
+// readIndexPages reads IndexName's current tree shape from pool, through
+// the two SECURITY DEFINER wrappers the init script installs.
+func readIndexPages(ctx context.Context, pool *pgxpool.Pool) (IndexPages, error) {
+	readMeta := func(ctx context.Context) (int, int, error) {
+		var root, level, fastroot, fastlevel int
+		err := pool.QueryRow(ctx,
+			`SELECT root, level, fastroot, fastlevel FROM glasshouse_btree_metap()`,
+		).Scan(&root, &level, &fastroot, &fastlevel)
+		if err != nil {
+			return 0, 0, fmt.Errorf("postgres: btree_metap: %w", err)
+		}
+		return root, level, nil
+	}
+
+	readPage := func(ctx context.Context, blk int) ([]IndexItem, error) {
+		rows, err := pool.Query(ctx,
+			`SELECT itemoffset, ctid, dead, data_hex
+			 FROM glasshouse_btree_page_items($1::int4)
+			 ORDER BY itemoffset`,
+			blk,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("postgres: btree_page_items: %w", err)
+		}
+		defer rows.Close()
+		var items []IndexItem
+		for rows.Next() {
+			var it IndexItem
+			if err := rows.Scan(&it.ItemOffset, &it.CTID, &it.Dead, &it.DataHex); err != nil {
+				return nil, fmt.Errorf("postgres: scan index item: %w", err)
+			}
+			items = append(items, it)
+		}
+		if err := rows.Err(); err != nil {
+			return nil, fmt.Errorf("postgres: index items: %w", err)
+		}
+		if items == nil {
+			items = []IndexItem{}
+		}
+		return items, nil
+	}
+
+	return walkIndex(ctx, IndexName, readMeta, readPage)
+}
+
+// WithIndexAdapter reads the demo table's heap pages and its payload
+// index's pages in the same poll. It embeds the heap Adapter and reuses its
+// Connect, Close, StreamEvents (heap-tuple diff events only — the index
+// section updates with every snapshot, but has no event kind of its own
+// yet), and Actions unchanged; only Snapshot is overridden.
+type WithIndexAdapter struct {
+	*Adapter
+}
+
+// NewWithIndex returns an adapter that polls both the heap and the index
+// every interval.
+func NewWithIndex(interval time.Duration) *WithIndexAdapter {
+	return &WithIndexAdapter{Adapter: New(interval)}
+}
+
+// Snapshot returns the current heap pages and index pages together.
+func (a *WithIndexAdapter) Snapshot(ctx context.Context) (adapter.Snapshot, error) {
+	heap, err := a.readPages(ctx)
+	if err != nil {
+		return adapter.Snapshot{}, err
+	}
+	pool, err := a.getPool()
+	if err != nil {
+		return adapter.Snapshot{}, err
+	}
+	index, err := readIndexPages(ctx, pool)
+	if err != nil {
+		return adapter.Snapshot{}, err
+	}
+
+	a.mu.Lock()
+	seq := a.seq
+	source := a.source
+	a.mu.Unlock()
+
+	return adapter.Snapshot{
+		Type:      TypeHeapAndIndex,
+		Source:    source,
+		Seq:       seq,
+		Timestamp: time.Now().UTC(),
+		Data: HeapAndIndex{
+			Relation: Relation,
+			Heap:     heap,
+			Index:    index,
+		},
+	}, nil
 }
