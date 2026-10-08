@@ -23,8 +23,10 @@ const panelMarker = "<!-- lab-panel -->"
 // itself, from this (parent) document — that needs no permission policy on
 // the iframe, unlike content inside the iframe asking to go fullscreen.
 const panelHTML = `<div class="lab-panel-wrap">
-  <button type="button" class="lab-fullscreen" data-for="lab-panel">Full window</button>
-  <iframe id="lab-panel" class="lab-panel" src="http://127.0.0.1:8765/" title="Lab panel" height="640" allow="local-network-access"></iframe>
+  <div class="lab-panel-inner">
+    <button type="button" class="lab-fullscreen" data-for="lab-panel">Full window</button>
+    <iframe id="lab-panel" class="lab-panel" src="http://127.0.0.1:8765/" title="Lab panel" height="640" allow="local-network-access"></iframe>
+  </div>
 </div>
 <script>
 (function () {

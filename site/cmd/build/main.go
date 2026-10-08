@@ -25,9 +25,13 @@ const page = `<!doctype html>
   .lab-panel-wrap {
     display: block;
     width: 100vw;
-    max-width: 1100px;
     margin-left: calc(50% - 50vw);
     margin-right: calc(50% - 50vw);
+  }
+  .lab-panel-inner {
+    display: block;
+    max-width: 1100px;
+    margin: 0 auto;
   }
   .lab-fullscreen {
     display: block;
