@@ -97,7 +97,7 @@ configs:
       LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog, public
       AS $$f$$
         SELECT i.itemoffset::int, i.ctid::text, COALESCE(i.dead, false),
-               COALESCE(encode(substring(i.data from 1 for 16), 'hex'), '')
+               COALESCE(substring(i.data from 1 for 32), '')
         FROM bt_page_items('glasshouse_demo_payload_idx', blk) AS i
       $$f$$;
 
