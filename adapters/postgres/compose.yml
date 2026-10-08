@@ -14,12 +14,6 @@
 # point the lab at a different copy of the article (a local checkout, a
 # fork's Pages site, ...).
 #
-# GLASSHOUSE_ADAPTER selects which article's lab this is: "postgres" (the
-# heap-page article, the default) or "postgres-index" (the index-page
-# article). Both read the same database; the index and its two wrapper
-# functions are created either way, so switching is just restarting the
-# Inspector with a different flag.
-#
 # Both published ports are bound to 127.0.0.1, so they are reachable from this
 # machine only. The Inspector binds 0.0.0.0 inside its own container only; the
 # host side stays on loopback. The passwords are development defaults for a
@@ -123,7 +117,7 @@ services:
       - -addr
       - 0.0.0.0:8765
       - -adapter
-      - ${GLASSHOUSE_ADAPTER:-postgres}
+      - postgres
       - -origin
       - ${GLASSHOUSE_ALLOWED_ORIGIN:-https://alirasoulinejad.github.io}
     environment:

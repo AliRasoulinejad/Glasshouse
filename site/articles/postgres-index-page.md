@@ -26,20 +26,18 @@ bound (a "high key") or, on the leftmost page of a level, an empty
 
 ## Start the lab
 
-This article shares its compose file with the heap-page article, switched
-to the index adapter:
+This article shares its lab with the heap-page article — the same compose
+file, the same database, the same Inspector:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/AliRasoulinejad/Glasshouse/v0.1.0/adapters/postgres/compose.yml | \
   GLASSHOUSE_INSPECTOR_CONTEXT=https://github.com/AliRasoulinejad/Glasshouse.git#v0.1.0:inspector \
-  GLASSHOUSE_ADAPTER=postgres-index \
   docker compose -f - up -d --build --wait
 ```
 
 Once it reports ready, the panel at the end of this article connects to it
-on `127.0.0.1:8765`, the same as the heap-page article. Only one of the two
-labs can run on that port at a time — stop this one with `down -v` before
-starting the other.
+on `127.0.0.1:8765`, the same as the heap-page article. If that article's
+lab is already running, this one is too — no separate start needed.
 
 ## Watch it change
 
@@ -66,7 +64,6 @@ Stop the lab and remove its data with the same command, swapping `up` for
 ```sh
 curl -fsSL https://raw.githubusercontent.com/AliRasoulinejad/Glasshouse/v0.1.0/adapters/postgres/compose.yml | \
   GLASSHOUSE_INSPECTOR_CONTEXT=https://github.com/AliRasoulinejad/Glasshouse.git#v0.1.0:inspector \
-  GLASSHOUSE_ADAPTER=postgres-index \
   docker compose -f - down -v
 ```
 

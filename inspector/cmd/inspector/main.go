@@ -32,7 +32,7 @@ func (m *multiFlag) Set(v string) error { *m = append(*m, v); return nil }
 
 func main() {
 	addr := flag.String("addr", "127.0.0.1:8765", "listen address; must be loopback")
-	adapterName := flag.String("adapter", "mock", "adapter to run: mock | postgres | postgres-index")
+	adapterName := flag.String("adapter", "mock", "adapter to run: mock | postgres")
 	containerMode := flag.Bool("container", false, "allow binding 0.0.0.0 inside a container; the host must publish on 127.0.0.1 only")
 	var origins multiFlag
 	flag.Var(&origins, "origin", "article origin allowed to call the API (repeatable), e.g. https://example.com")
@@ -124,13 +124,7 @@ func buildAdapter(name string) (adapter.Adapter, adapter.Target, error) {
 		if dsn == "" {
 			return nil, adapter.Target{}, errors.New("GLASSHOUSE_PG_DSN is not set")
 		}
-		return postgres.New(500 * time.Millisecond), adapter.Target{Name: "postgres", Endpoint: dsn}, nil
-	case "postgres-index":
-		dsn := os.Getenv("GLASSHOUSE_PG_DSN")
-		if dsn == "" {
-			return nil, adapter.Target{}, errors.New("GLASSHOUSE_PG_DSN is not set")
-		}
-		return postgres.NewWithIndex(500 * time.Millisecond), adapter.Target{Name: "postgres-index", Endpoint: dsn}, nil
+		return postgres.NewWithIndex(500 * time.Millisecond), adapter.Target{Name: "postgres", Endpoint: dsn}, nil
 	default:
 		return nil, adapter.Target{}, fmt.Errorf("unknown adapter %q", name)
 	}
@@ -144,8 +138,6 @@ func listActions(name string, w io.Writer) error {
 	case "mock":
 		a = mock.New(time.Second)
 	case "postgres":
-		a = postgres.New(500 * time.Millisecond)
-	case "postgres-index":
 		a = postgres.NewWithIndex(500 * time.Millisecond)
 	default:
 		return fmt.Errorf("unknown adapter %q", name)

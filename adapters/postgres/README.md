@@ -56,20 +56,13 @@ The same pattern covers the index: `glasshouse_btree_metap()` and
 `glasshouse_btree_page_items(blk int)`, both hard-wired to
 `glasshouse_demo_payload_idx`.
 
-## Running the index-page lab instead
+## One lab, two articles
 
-The same compose file serves both articles. Set `GLASSHOUSE_ADAPTER` before
-starting it:
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/AliRasoulinejad/Glasshouse/v0.1.0/adapters/postgres/compose.yml | \
-  GLASSHOUSE_INSPECTOR_CONTEXT=https://github.com/AliRasoulinejad/Glasshouse.git#v0.1.0:inspector \
-  GLASSHOUSE_ADAPTER=postgres-index \
-  docker compose -f - up -d --build --wait
-```
-
-Only one of the two labs runs on `:8765` at a time — stop one
-(`docker compose ... down -v`) before starting the other.
+The same compose file serves both the heap-page and index-page articles —
+there is only one adapter mode, and it always reads both the heap pages and
+the index pages in the same snapshot. Only one copy of the lab runs on
+`:8765` at a time — stop it (`docker compose ... down -v`) before starting
+another copy (e.g. to pick up a different `GLASSHOUSE_ALLOWED_ORIGIN`).
 
 ## Notes
 

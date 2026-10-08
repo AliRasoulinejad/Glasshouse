@@ -39,10 +39,9 @@ progress; see `docs/superpowers/specs/2026-10-04-website-design.md`.
 - `make stack-up` / `make stack-down` — Postgres 17 + Inspector in containers.
   `GLASSHOUSE_ALLOWED_ORIGIN` defaults to the published article's origin
   (`compose.yml`); set it only to point the lab at a different copy of the
-  article. Stop one path before starting the other. Set
-  `GLASSHOUSE_ADAPTER=postgres-index` on `make stack-up` (or the compose
-  command directly) to run the index-page article's lab instead of the
-  heap-page one.
+  article. Stop one path before starting the other. The same stack serves
+  both the heap-page and index-page articles — the Inspector always emits
+  both in one snapshot, no mode switch.
 - `sh adapters/postgres/demo.sh` — before/after snapshot around an insert.
 - `make site-build` — build the static articles into `site/dist`.
 
