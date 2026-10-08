@@ -399,12 +399,29 @@
       "timestamp": "2026-10-03T19:23:35.542283389Z",
       "source": "postgres",
       "kind": "tuple_inserted",
+      "correlation_id": "postgres:0:4",
       "detail": {
         "free_space": 7284,
         "lp": 7,
         "lp_len": 57,
         "lp_off": 7744,
         "t_xmin": "764"
+      }
+    },
+    {
+      "id": "postgres:4b",
+      "seq": 21,
+      "timestamp": "2026-10-03T19:23:35.542283389Z",
+      "source": "postgres",
+      "kind": "wal_record",
+      "correlation_id": "postgres:0:4",
+      "detail": {
+        "lsn": "0/196DA10",
+        "rmgr": "Heap",
+        "record_type": "INSERT",
+        "block": 0,
+        "length": 64,
+        "description": "off 4 flags 0x00"
       }
     },
     {

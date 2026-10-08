@@ -49,6 +49,29 @@ Website). Schema version **1**. The Go types live in
 - `correlation_id` is opaque. The viewer only groups by it, never interprets it.
 - `detail` is adapter-specific.
 
+### Postgres: `wal_record`
+
+The Postgres heap-page adapter also emits `wal_record` events — WAL records,
+read live via `pg_walinspect`, that touched one of the relation's blocks.
+`detail` is:
+
+```json
+{
+  "lsn": "0/1A2B3C0",
+  "rmgr": "Heap",
+  "record_type": "INSERT",
+  "block": 5,
+  "length": 64,
+  "description": "off 12 flags 0x00"
+}
+```
+
+`correlation_id` on Postgres heap-page events (both `wal_record` and the
+existing `tuple_inserted`/`tuple_xmax_set`/`tuple_removed` kinds) has the
+form `<source>:<block>:<tick>`. Events sharing one `correlation_id` happened
+in the same poll tick and touched the same block — a WAL record and the
+heap-diff event it produced always share one.
+
 ## Changes from the handover draft
 
 The handover draft was the starting point. These additions are deliberate:
