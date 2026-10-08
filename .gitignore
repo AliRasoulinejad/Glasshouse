@@ -4,3 +4,6 @@
 
 # local IDE state (not project config)
 .idea/
+
+# superpowers execution scratch (ledgers, briefs, review packages)
+.superpowers/
