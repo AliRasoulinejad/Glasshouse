@@ -20,6 +20,8 @@ multi-tenant backend.
 - `schema/README.md` — snapshot/event contract, schema version 1.
 - `samples/postgres.heap_page.json` — static sample, same envelope as the API.
 - `site/` — static articles, built by `make site-build`; plain files, no backend.
+  Deployed to GitHub Pages by `.github/workflows/pages.yml` on every push to
+  `main` that touches `site/` or the Inspector's action list.
 - `Makefile` — the entry point. Run `make help`.
 
 Not built yet (deferred): the Postgres index and replication adapters (3b/3c),

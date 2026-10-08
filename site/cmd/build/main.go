@@ -29,6 +29,27 @@ const page = `<!doctype html>
 </main>
 `
 
+const indexPage = `<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glasshouse</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font: 16px/1.6 system-ui, sans-serif; max-width: 48rem; margin: 0 auto; padding: 0 16px; }
+</style>
+<main>
+<h1>Glasshouse</h1>
+<ul>
+{{range .Articles}}<li><a href="{{.Slug}}.html">{{.Title}}</a></li>
+{{end}}</ul>
+</main>
+`
+
+type articleLink struct {
+	Title string
+	Slug  string
+}
+
 func main() {
 	articles := flag.String("articles", "articles", "directory of Markdown articles")
 	out := flag.String("out", "dist", "output directory")
@@ -57,7 +78,9 @@ func run(articlesDir, outDir, actionsFile string) error {
 		return err
 	}
 	tmpl := template.Must(template.New("page").Parse(page))
+	idxTmpl := template.Must(template.New("index").Parse(indexPage))
 
+	var links []articleLink
 	for _, p := range paths {
 		src, err := os.ReadFile(p)
 		if err != nil {
@@ -67,7 +90,8 @@ func run(articlesDir, outDir, actionsFile string) error {
 		if err != nil {
 			return fmt.Errorf("%s: %w", p, err)
 		}
-		f, err := os.Create(filepath.Join(outDir, strings.TrimSuffix(filepath.Base(p), ".md")+".html"))
+		slug := strings.TrimSuffix(filepath.Base(p), ".md")
+		f, err := os.Create(filepath.Join(outDir, slug+".html"))
 		if err != nil {
 			return err
 		}
@@ -81,8 +105,18 @@ func run(articlesDir, outDir, actionsFile string) error {
 		if err != nil {
 			return err
 		}
+		links = append(links, articleLink{Title: a.Title, Slug: slug})
 	}
-	return nil
+
+	f, err := os.Create(filepath.Join(outDir, "index.html"))
+	if err != nil {
+		return err
+	}
+	err = idxTmpl.Execute(f, map[string]any{"Articles": links})
+	if cerr := f.Close(); err == nil {
+		err = cerr
+	}
+	return err
 }
 
 func readActions(path string) (map[string]bool, error) {
