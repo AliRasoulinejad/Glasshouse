@@ -13,6 +13,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"regexp"
+	"strconv"
 	"sync"
 	"time"
 
@@ -64,6 +66,17 @@ type Page struct {
 	// FreeSpace is the gap between the item pointer array and the tuple area.
 	FreeSpace int    `json:"free_space"`
 	Items     []Item `json:"items"`
+}
+
+// WALRecord is one WAL record, read live via pg_walinspect, that touched a
+// block of Relation's main fork.
+type WALRecord struct {
+	LSN         string `json:"lsn"`
+	Rmgr        string `json:"rmgr"`
+	RecordType  string `json:"record_type"`
+	Block       int    `json:"block"`
+	Length      int    `json:"length"`
+	Description string `json:"description"`
 }
 
 // maxPages caps how many blocks are read and shown side by side, so the
@@ -232,6 +245,34 @@ func orElse(s sql.NullString, def string) string {
 		return def
 	}
 	return s.String
+}
+
+// blockRefLine matches one "blkref" line from pg_walinspect's block_ref
+// column, e.g. "blkref #0: rel 1663/16401/24595 fork main blk 3". A record
+// can touch more than one block; block_ref lists one blkref line per block,
+// newline-separated.
+var blockRefLine = regexp.MustCompile(`rel \d+/\d+/(\d+) fork (\w+) blk (\d+)`)
+
+// parseBlockRefBlocks returns the block numbers in blockRef that belong to
+// relfilenode's main fork (the heap's own fork; vm/fsm/init blocks are not
+// heap pages the viewer shows, so they are not heap-change causes here).
+func parseBlockRefBlocks(blockRef string, relfilenode uint32) []int {
+	var blocks []int
+	for _, m := range blockRefLine.FindAllStringSubmatch(blockRef, -1) {
+		if m[2] != "main" {
+			continue
+		}
+		node, err := strconv.ParseUint(m[1], 10, 32)
+		if err != nil || uint32(node) != relfilenode {
+			continue
+		}
+		blk, err := strconv.Atoi(m[3])
+		if err != nil {
+			continue
+		}
+		blocks = append(blocks, blk)
+	}
+	return blocks
 }
 
 // readPages pulls the relation's last few blocks, oldest first, so the view
