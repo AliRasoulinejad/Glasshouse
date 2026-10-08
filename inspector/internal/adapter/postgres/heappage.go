@@ -137,6 +137,19 @@ func (a *Adapter) Connect(ctx context.Context, target adapter.Target) error {
 		return errors.New("postgres: pageinspect extension is not installed")
 	}
 
+	var walInspectInstalled bool
+	err = pool.QueryRow(ctx,
+		`SELECT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_walinspect')`,
+	).Scan(&walInspectInstalled)
+	if err != nil {
+		pool.Close()
+		return fmt.Errorf("postgres: check pg_walinspect: %w", err)
+	}
+	if !walInspectInstalled {
+		pool.Close()
+		return errors.New("postgres: pg_walinspect extension is not installed")
+	}
+
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	if a.pool != nil {
