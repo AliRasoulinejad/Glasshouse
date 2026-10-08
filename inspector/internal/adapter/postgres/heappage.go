@@ -325,7 +325,8 @@ func (a *Adapter) readWALRecords(ctx context.Context, prevLSN, currLSN string) (
 
 	var out []WALRecord
 	for rows.Next() {
-		var lsn, rmgr, recordType, description, blockRef string
+		var lsn, rmgr, recordType, blockRef string
+		var description sql.NullString
 		var length int
 		if err := rows.Scan(&lsn, &rmgr, &recordType, &length, &description, &blockRef); err != nil {
 			return nil, fmt.Errorf("postgres: scan wal record: %w", err)
@@ -333,7 +334,7 @@ func (a *Adapter) readWALRecords(ctx context.Context, prevLSN, currLSN string) (
 		for _, blk := range parseBlockRefBlocks(blockRef, relfilenode) {
 			out = append(out, WALRecord{
 				LSN: lsn, Rmgr: rmgr, RecordType: recordType,
-				Block: blk, Length: length, Description: description,
+				Block: blk, Length: length, Description: orElse(description, ""),
 			})
 		}
 	}
