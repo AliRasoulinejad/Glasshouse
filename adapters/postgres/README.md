@@ -8,22 +8,22 @@ One command pulls the compose file and starts Postgres and the Inspector. The
 Inspector image is built from source, so the source location must be given:
 
 ```sh
-curl -fsSL <url>/compose.yml | GLASSHOUSE_INSPECTOR_CONTEXT=<git-url-or-path-to-inspector> GLASSHOUSE_ALLOWED_ORIGIN=<article-origin> docker compose -f - up -d --build --wait
+curl -fsSL <url>/compose.yml | GLASSHOUSE_INSPECTOR_CONTEXT=<git-url-or-path-to-inspector> docker compose -f - up -d --build --wait
 ```
 
-Set `GLASSHOUSE_ALLOWED_ORIGIN` to the origin the article is served from
-(for example `https://example.com`). It is required. It sets which sites may
-frame the viewer. The same variable must be set for `docker compose down` and
-`logs` too, since Compose re-reads the file's variables for every command.
+`GLASSHOUSE_ALLOWED_ORIGIN` sets which site may frame the viewer. It defaults
+to the published article's origin, so you don't need to set it to follow the
+article. Set it only to point the lab at a different copy of the article (a
+local checkout, a fork's Pages site, ...) — and set it the same way for
+`docker compose down` and `logs` too, since Compose re-reads the file's
+variables for every command.
 
 Note: `docker compose -f https://...` does not work, because Compose only reads
 local paths. Piping through `-f -` is the form that works.
 
 Then open http://127.0.0.1:8765/ in a browser. That is the viewer.
 
-From a checkout: `GLASSHOUSE_ALLOWED_ORIGIN=<article-origin> make stack-up`,
-`GLASSHOUSE_ALLOWED_ORIGIN=<article-origin> make stack-down`,
-`sh adapters/postgres/demo.sh`.
+From a checkout: `make stack-up`, `make stack-down`, `sh adapters/postgres/demo.sh`.
 
 Security boundary in the container: the Inspector binds 0.0.0.0 inside its own
 container only (`-container`). Both published ports are bound to 127.0.0.1 on

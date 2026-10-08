@@ -187,6 +187,12 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.setFraming(w)
+	// Chrome's Local Network Access checks require this on every response
+	// before it will let a public page load or call this loopback server,
+	// whether by iframe navigation or by fetch. The origin check above and
+	// below is the actual access control; this header only answers Chrome's
+	// private-network preflight so the browser's permission prompt can run.
+	w.Header().Set("Access-Control-Allow-Private-Network", "true")
 	s.mux.ServeHTTP(w, r)
 }
 

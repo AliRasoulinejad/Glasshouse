@@ -12,18 +12,19 @@ map comes from the database you start in the next step.
 
 ## Start the lab
 
-Pull the compose file and start Postgres and the Inspector together. Set
-`GLASSHOUSE_ALLOWED_ORIGIN` to the origin this article is served from.
+Pull the compose file and start Postgres and the Inspector together.
 
 ```sh
 curl -fsSL <url>/compose.yml | \
   GLASSHOUSE_INSPECTOR_CONTEXT=<git-url-or-path-to-inspector> \
-  GLASSHOUSE_ALLOWED_ORIGIN=<this-article's-origin> \
   docker compose -f - up -d --build --wait
 ```
 
 Once it reports ready, the panel at the end of this article connects to it
-on `127.0.0.1:8765`.
+on `127.0.0.1:8765`. The first time, your browser will ask whether this site
+may connect to your local network — click **Allow**. That prompt is the
+browser confirming you want this page talking to the lab you just started;
+without it, the panel cannot reach the Inspector at all.
 
 ## Read the page
 
@@ -61,13 +62,11 @@ thing, and a checkout is not required to follow this article.
 
 ## When you're done
 
-Stop the lab and remove its data with the same compose file, using the same
-`GLASSHOUSE_ALLOWED_ORIGIN` value you started it with:
+Stop the lab and remove its data with the same compose file:
 
 ```sh
 curl -fsSL <url>/compose.yml | \
   GLASSHOUSE_INSPECTOR_CONTEXT=<git-url-or-path-to-inspector> \
-  GLASSHOUSE_ALLOWED_ORIGIN=<this-article's-origin> \
   docker compose -f - down -v
 ```
 

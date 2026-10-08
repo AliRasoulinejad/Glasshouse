@@ -15,8 +15,10 @@ import (
 const panelMarker = "<!-- lab-panel -->"
 
 // panelHTML is the Inspector viewer, framed. It is always the loopback
-// address: the reader runs the lab on their own machine.
-const panelHTML = `<iframe class="lab-panel" src="http://127.0.0.1:8765/" title="Lab panel" height="640"></iframe>`
+// address: the reader runs the lab on their own machine. The allow attribute
+// is required for Chrome's Local Network Access: without it, the browser
+// silently blocks the navigation instead of prompting the reader to allow it.
+const panelHTML = `<iframe class="lab-panel" src="http://127.0.0.1:8765/" title="Lab panel" height="640" allow="local-network-access"></iframe>`
 
 // Article is one built page.
 type Article struct {

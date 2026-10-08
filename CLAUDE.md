@@ -33,9 +33,10 @@ and Redis/Mongo/MinIO. The Website is in progress; see
 - `make test` — gofmt check, vet, tests. Add `USE_DOCKER=1` when Go is not
   installed on the host (this machine has no local Go).
 - `make run-mock` / `make run-postgres` — Inspector on the host. Both use :8765.
-- `GLASSHOUSE_ALLOWED_ORIGIN=<origin> make stack-up` / `make stack-down` —
-  Postgres 17 + Inspector in containers. The origin is required by `stack-up`
-  (compose has no default). Stop one path before starting the other.
+- `make stack-up` / `make stack-down` — Postgres 17 + Inspector in containers.
+  `GLASSHOUSE_ALLOWED_ORIGIN` defaults to the published article's origin
+  (`compose.yml`); set it only to point the lab at a different copy of the
+  article. Stop one path before starting the other.
 - `sh adapters/postgres/demo.sh` — before/after snapshot around an insert.
 - `make site-build` — build the static articles into `site/dist`.
 
@@ -73,6 +74,13 @@ and Redis/Mongo/MinIO. The Website is in progress; see
 - `go fmt` rewrites files. Use `gofmt -l` for checks.
 - `pkill -f <pattern>` can match its own shell and exit 144. Use `pkill -x`
   or a bracketed pattern such as `[h]ttp.server`.
+- Chrome's Local Network Access blocks the article's iframe from loading
+  `127.0.0.1` outright ("The connection is blocked...") unless the iframe
+  carries `allow="local-network-access"` (`panelHTML` in
+  `site/internal/article/article.go`) and the Inspector answers with
+  `Access-Control-Allow-Private-Network: true` on every response (set in
+  `Server.ServeHTTP`). With both in place, Chrome shows a one-time permission
+  prompt instead of blocking; the reader must click Allow.
 
 ## Conventions
 

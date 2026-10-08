@@ -5,12 +5,14 @@
 #
 # Run it from a URL. The Inspector image is built from source, so the source
 # location must be given too (a git URL, or a local path from a checkout).
-# GLASSHOUSE_ALLOWED_ORIGIN is required too: it names the article origin
-# allowed to frame the viewer.
 #   curl -fsSL <url>/compose.yml | \
 #     GLASSHOUSE_INSPECTOR_CONTEXT=<source> \
-#     GLASSHOUSE_ALLOWED_ORIGIN=<article-origin> \
 #     docker compose -f - up -d --wait
+#
+# GLASSHOUSE_ALLOWED_ORIGIN names the article origin allowed to frame the
+# viewer. It defaults to the published article's origin; set it only to
+# point the lab at a different copy of the article (a local checkout, a
+# fork's Pages site, ...).
 #
 # Both published ports are bound to 127.0.0.1, so they are reachable from this
 # machine only. The Inspector binds 0.0.0.0 inside its own container only; the
@@ -87,7 +89,7 @@ services:
       - -adapter
       - postgres
       - -origin
-      - ${GLASSHOUSE_ALLOWED_ORIGIN:?set GLASSHOUSE_ALLOWED_ORIGIN to the article site origin, e.g. https://example.com}
+      - ${GLASSHOUSE_ALLOWED_ORIGIN:-https://alirasoulinejad.github.io}
     environment:
       # Connects as the least-privilege role, over the compose network.
       GLASSHOUSE_PG_DSN: postgres://glasshouse_inspector:${GLASSHOUSE_PG_INSPECTOR_PASSWORD:-glasshouse-local-inspector}@postgres:5432/glasshouse?sslmode=disable

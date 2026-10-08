@@ -2,7 +2,7 @@
 #
 #   make test          run Go tests (vet + fmt check included)
 #   make run-mock      start the Inspector on the mock adapter
-#   make stack-up     start Postgres + Inspector (needs GLASSHOUSE_ALLOWED_ORIGIN=<origin>)
+#   make stack-up     start Postgres + Inspector (origin defaults to the article's)
 #   make stack-down   stop the stack and delete its data
 #   make run-postgres start the Inspector on the host instead (stop the stack first: same port)
 #   make demo         before/after snapshot around an insert (needs the stack or run-postgres)
