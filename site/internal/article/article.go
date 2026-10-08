@@ -18,7 +18,27 @@ const panelMarker = "<!-- lab-panel -->"
 // address: the reader runs the lab on their own machine. The allow attribute
 // is required for Chrome's Local Network Access: without it, the browser
 // silently blocks the navigation instead of prompting the reader to allow it.
-const panelHTML = `<iframe class="lab-panel" src="http://127.0.0.1:8765/" title="Lab panel" height="640" allow="local-network-access"></iframe>`
+//
+// The full-window button calls requestFullscreen() on the iframe element
+// itself, from this (parent) document — that needs no permission policy on
+// the iframe, unlike content inside the iframe asking to go fullscreen.
+const panelHTML = `<div class="lab-panel-wrap">
+  <button type="button" class="lab-fullscreen" data-for="lab-panel">Full window</button>
+  <iframe id="lab-panel" class="lab-panel" src="http://127.0.0.1:8765/" title="Lab panel" height="640" allow="local-network-access"></iframe>
+</div>
+<script>
+(function () {
+  var btn = document.currentScript.previousElementSibling.querySelector('.lab-fullscreen');
+  var frame = document.getElementById(btn.dataset.for);
+  btn.addEventListener('click', function () {
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else if (frame.requestFullscreen) {
+      frame.requestFullscreen();
+    }
+  });
+})();
+</script>`
 
 // Article is one built page.
 type Article struct {

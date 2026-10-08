@@ -21,8 +21,36 @@ const page = `<!doctype html>
 <title>{{.Title}} · Glasshouse</title>
 <style>
   :root { color-scheme: light dark; }
-  body { font: 16px/1.6 system-ui, sans-serif; max-width: 48rem; margin: 0 auto; padding: 0 16px; }
-  .lab-panel { width: 100%; border: 1px solid #8884; border-radius: 6px; }
+  body { font: 16px/1.6 system-ui, sans-serif; max-width: 48rem; margin: 0 auto; padding: 0 16px 96px; }
+  .lab-panel-wrap {
+    display: block;
+    width: 100vw;
+    max-width: 1100px;
+    margin-left: calc(50% - 50vw);
+    margin-right: calc(50% - 50vw);
+  }
+  .lab-fullscreen {
+    display: block;
+    margin: 0 0 6px auto;
+    font: inherit;
+    padding: 6px 12px;
+    border: 1px solid #8884;
+    border-radius: 6px;
+    background: none;
+    color: inherit;
+    cursor: pointer;
+  }
+  .lab-panel {
+    display: block;
+    width: 100%;
+    height: 640px;
+    border: 1px solid #8884;
+    border-radius: 6px;
+  }
+  .lab-panel:fullscreen {
+    width: 100vw;
+    height: 100vh;
+  }
 </style>
 <main>
 {{.Body}}

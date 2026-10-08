@@ -85,11 +85,11 @@ body {
 
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 360px;
+  grid-template-columns: minmax(0, 1fr) 300px;
   gap: 16px;
   padding: 16px 20px 32px;
 }
-@media (max-width: 900px) {
+@media (max-width: 760px) {
   .layout { grid-template-columns: 1fr; padding: 16px; }
 }
 

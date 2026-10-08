@@ -46,7 +46,7 @@ func TestBuildDropsRawHTML(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(string(a.Body), "<script>") {
+	if strings.Contains(string(a.Body), "alert(1)") {
 		t.Error("raw HTML from the Markdown reached the page")
 	}
 }
