@@ -4,6 +4,7 @@
 #   make run-mock      start the Inspector on the mock adapter
 #   make stack-up     start Postgres + Inspector (origin defaults to the article's)
 #   make stack-down   stop the stack and delete its data
+#   make stack-restart   stack-down then stack-up, e.g. to pick up code changes
 #   make run-postgres start the Inspector on the host instead (stop the stack first: same port)
 #   make demo         before/after snapshot around an insert (needs the stack or run-postgres)
 #   make site-build   build the static articles into site/dist (validates lab actions)
@@ -38,7 +39,7 @@ else
   GOFMT_SITE = gofmt
 endif
 
-.PHONY: help test vet fmt-check fmt build run-mock run-postgres stack-up stack-down stack-logs demo site-actions site-build site-fmt-check site-vet clean
+.PHONY: help test vet fmt-check fmt build run-mock run-postgres stack-up stack-down stack-restart stack-logs demo site-actions site-build site-fmt-check site-vet clean
 
 help:
 	@grep -E '^#   make ' Makefile | sed 's/^#   //'
@@ -91,6 +92,10 @@ stack-up:
 
 stack-down:
 	cd $(PG_DIR) && GLASSHOUSE_INSPECTOR_CONTEXT=../../$(INSPECTOR_DIR) GLASSHOUSE_ALLOWED_ORIGIN=$${GLASSHOUSE_ALLOWED_ORIGIN:-unused} docker compose -f compose.yml down -v
+
+# down -v then up --build, so a fresh volume and a rebuilt image pick up
+# changes to the init script or the Inspector's code.
+stack-restart: stack-down stack-up
 
 stack-logs:
 	cd $(PG_DIR) && GLASSHOUSE_INSPECTOR_CONTEXT=../../$(INSPECTOR_DIR) GLASSHOUSE_ALLOWED_ORIGIN=$${GLASSHOUSE_ALLOWED_ORIGIN:-unused} docker compose -f compose.yml logs --tail=50
