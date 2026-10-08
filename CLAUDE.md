@@ -81,6 +81,14 @@ and Redis/Mongo/MinIO. The Website is in progress; see
   `Access-Control-Allow-Private-Network: true` on every response (set in
   `Server.ServeHTTP`). With both in place, Chrome shows a one-time permission
   prompt instead of blocking; the reader must click Allow.
+- `ctid::point` fails ("cannot cast type tid to point"). Go through text:
+  `ctid::text::point`. Used to find rows on the relation's current last block
+  so `update_rows`/`delete_rows` act on what the viewer is showing.
+- `VACUUM (FULL)` needs the PG17 `MAINTAIN` privilege (granted to
+  `glasshouse_inspector` in `compose.yml`), not superuser.
+- The adapter always reads the relation's *last* block (`lastBlock` in
+  `heappage.go`), not a fixed one, so the view keeps following the demo table
+  as `insert_rows` pushes it past its first page.
 
 ## Conventions
 

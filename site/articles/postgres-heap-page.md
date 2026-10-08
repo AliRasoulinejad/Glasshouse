@@ -1,6 +1,6 @@
 ---
 title: Reading a heap page
-actions: [insert_rows]
+actions: [insert_rows, update_rows, delete_rows, vacuum_full]
 ---
 
 ## What you will see
@@ -9,6 +9,11 @@ PostgreSQL stores a table's rows in fixed-size pages, 8 KiB each. This
 article shows you one page of a real table, read from a real running
 Postgres with `pageinspect`. Nothing below is simulated: every byte in the
 map comes from the database you start in the next step.
+
+The demo table is `glasshouse_demo(id int, payload text)`. `payload` holds a
+random 32-character hex string — there is nothing meaningful in it; it exists
+only to give each row some bytes to store. What matters here is the page
+layout around that data, not the data itself.
 
 ## Start the lab
 
@@ -46,6 +51,23 @@ see its fields on the right.
 Press **insert_rows** in the panel. It inserts 10 rows into the demo table
 through a fixed, constant statement, nothing the browser can change. Watch
 the item pointer list grow and the free space shrink.
+
+Insert enough times and the page you are watching fills up — Postgres starts
+a new one, and the panel follows it there, always showing the table's last
+page.
+
+## Dead tuples
+
+PostgreSQL never overwrites a row in place. **update_rows** writes a new
+version of a few rows on the page; the old versions stay put with `t_xmax`
+set to the transaction that replaced them — dead, but not yet gone.
+**delete_rows** does the same to a few rows directly: nothing disappears
+immediately, it is just marked dead.
+
+Press **vacuum_full** to reclaim that space. It rewrites the table without
+the dead tuples, so their item pointers vanish and the free space recovers.
+This is what `VACUUM` does continuously in the background on a real database;
+here you trigger it by hand so the before/after is visible.
 
 ## Check it yourself
 

@@ -66,23 +66,23 @@ type HeapPage struct {
 	Items     []Item `json:"items"`
 }
 
-// Adapter inspects one block of Relation.
+// Adapter inspects Relation's last block — the one most recently written —
+// so the view keeps up as the demo table grows past its first page.
 type Adapter struct {
-	// Block is the heap block to read. Block 0 is the first page.
-	Block int
 	// Interval is how often the event stream re-reads the page.
 	Interval time.Duration
 
-	mu     sync.Mutex
-	pool   *pgxpool.Pool
-	source string
-	seq    uint64
-	prev   map[int]Item
+	mu        sync.Mutex
+	pool      *pgxpool.Pool
+	source    string
+	seq       uint64
+	prev      map[int]Item
+	prevBlock int
 }
 
-// New returns an adapter for block 0 that polls every interval.
+// New returns an adapter that polls every interval.
 func New(interval time.Duration) *Adapter {
-	return &Adapter{Block: 0, Interval: interval}
+	return &Adapter{Interval: interval}
 }
 
 // Connect opens a pool and checks that pageinspect is installed. The endpoint
@@ -139,19 +139,39 @@ func (a *Adapter) getPool() (*pgxpool.Pool, error) {
 	return a.pool, nil
 }
 
-// readPage pulls the current header and item pointers of the configured block.
+// lastBlock returns the relation's highest block number, the one most
+// recently written.
+func lastBlock(ctx context.Context, pool *pgxpool.Pool) (int, error) {
+	var blocks int
+	err := pool.QueryRow(ctx,
+		`SELECT greatest(pg_relation_size($1::regclass) / current_setting('block_size')::int - 1, 0)`,
+		Relation,
+	).Scan(&blocks)
+	if err != nil {
+		return 0, fmt.Errorf("postgres: relation size: %w", err)
+	}
+	return blocks, nil
+}
+
+// readPage pulls the current header and item pointers of the relation's last
+// block, so the view keeps up as the demo table grows past its first page.
 func (a *Adapter) readPage(ctx context.Context) (HeapPage, error) {
 	pool, err := a.getPool()
 	if err != nil {
 		return HeapPage{}, err
 	}
 
-	page := HeapPage{Relation: Relation, Block: a.Block}
+	blocks, err := lastBlock(ctx, pool)
+	if err != nil {
+		return HeapPage{}, err
+	}
+
+	page := HeapPage{Relation: Relation, Block: blocks}
 
 	err = pool.QueryRow(ctx,
 		`SELECT lsn, checksum, flags, lower, upper, special, pagesize, version, prune_xid
 		 FROM glasshouse_page_header($1::int4)`,
-		a.Block,
+		blocks,
 	).Scan(&page.Header.LSN, &page.Header.Checksum, &page.Header.Flags,
 		&page.Header.Lower, &page.Header.Upper, &page.Header.Special,
 		&page.Header.PageSize, &page.Header.Version, &page.Header.PruneXID)
@@ -165,7 +185,7 @@ func (a *Adapter) readPage(ctx context.Context) (HeapPage, error) {
 		        t_infomask2, t_infomask, t_hoff, t_bits, t_data_hex
 		 FROM glasshouse_heap_page_items($1::int4)
 		 ORDER BY lp`,
-		a.Block,
+		blocks,
 	)
 	if err != nil {
 		return HeapPage{}, fmt.Errorf("postgres: heap_page_items: %w", err)
@@ -249,7 +269,8 @@ func (a *Adapter) StreamEvents(ctx context.Context) (<-chan adapter.Event, <-cha
 }
 
 // diff compares the page with the previous read and returns events for new
-// tuples and for tuples whose xmax was set (a delete or update).
+// tuples, for tuples whose xmax was set (a delete or update), and for tuples
+// that vanished from the same block (a vacuum reclaiming a dead tuple).
 func (a *Adapter) diff(page HeapPage, now time.Time) []adapter.Event {
 	a.mu.Lock()
 	defer a.mu.Unlock()
@@ -293,17 +314,37 @@ func (a *Adapter) diff(page HeapPage, now time.Time) []adapter.Event {
 				})
 			}
 		}
+		if page.Block == a.prevBlock {
+			for lp := range a.prev {
+				if _, stillThere := current[lp]; !stillThere {
+					emit("tuple_removed", map[string]any{
+						"lp":         lp,
+						"free_space": page.FreeSpace,
+					})
+				}
+			}
+		}
 	}
 	a.prev = current
+	a.prevBlock = page.Block
 	return out
 }
+
+// rowsOnLastBlock picks the first n tuples (by item pointer order) on the
+// relation's last block, so update_rows and delete_rows act on rows the
+// viewer is actually looking at.
+const rowsOnLastBlock = `
+	SELECT ctid FROM glasshouse_demo
+	WHERE (ctid::text::point)[0]::int = $1
+	ORDER BY ctid
+	LIMIT $2`
 
 // Actions exposes the fixed operations the viewer may trigger. Each one runs
 // a constant statement and takes no input.
 func (a *Adapter) Actions() map[string]adapter.Action {
 	return map[string]adapter.Action{
 		"insert_rows": {
-			Description: "Insert 10 demo rows into " + Relation,
+			Description: "Insert 10 rows into " + Relation + " (id: null, payload: a random 32-char hex string)",
 			Run: func(ctx context.Context) (any, error) {
 				pool, err := a.getPool()
 				if err != nil {
@@ -316,6 +357,62 @@ func (a *Adapter) Actions() map[string]adapter.Action {
 					return nil, err
 				}
 				return map[string]any{"rows_inserted": tag.RowsAffected()}, nil
+			},
+		},
+		"update_rows": {
+			Description: "Overwrite payload on 3 rows of the visible page with a new random hex string (the old row version becomes a dead tuple)",
+			Run: func(ctx context.Context) (any, error) {
+				pool, err := a.getPool()
+				if err != nil {
+					return nil, err
+				}
+				blk, err := lastBlock(ctx, pool)
+				if err != nil {
+					return nil, err
+				}
+				tag, err := pool.Exec(ctx,
+					`WITH target AS (`+rowsOnLastBlock+`)
+					 UPDATE glasshouse_demo d SET payload = md5(random()::text)
+					 FROM target t WHERE d.ctid = t.ctid`,
+					blk, 3)
+				if err != nil {
+					return nil, err
+				}
+				return map[string]any{"rows_updated": tag.RowsAffected()}, nil
+			},
+		},
+		"delete_rows": {
+			Description: "Delete 3 rows from the visible page (they become dead tuples until vacuumed)",
+			Run: func(ctx context.Context) (any, error) {
+				pool, err := a.getPool()
+				if err != nil {
+					return nil, err
+				}
+				blk, err := lastBlock(ctx, pool)
+				if err != nil {
+					return nil, err
+				}
+				tag, err := pool.Exec(ctx,
+					`WITH target AS (`+rowsOnLastBlock+`)
+					 DELETE FROM glasshouse_demo d USING target t WHERE d.ctid = t.ctid`,
+					blk, 3)
+				if err != nil {
+					return nil, err
+				}
+				return map[string]any{"rows_deleted": tag.RowsAffected()}, nil
+			},
+		},
+		"vacuum_full": {
+			Description: "VACUUM FULL " + Relation + " (reclaims space held by dead tuples)",
+			Run: func(ctx context.Context) (any, error) {
+				pool, err := a.getPool()
+				if err != nil {
+					return nil, err
+				}
+				if _, err := pool.Exec(ctx, `VACUUM (FULL) glasshouse_demo`); err != nil {
+					return nil, err
+				}
+				return map[string]any{"vacuumed": true}, nil
 			},
 		},
 	}
