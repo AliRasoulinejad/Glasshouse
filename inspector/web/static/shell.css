@@ -164,6 +164,10 @@ button:focus-visible, select:focus-visible { outline: 2px solid var(--accent); o
 .heap-detail { min-width: 0; }
 .heap-detail h3 { font-size: 14px; }
 
+.wal-records { margin-top: 14px; }
+.wal-records h4 { font-size: 13px; margin: 0 0 6px; color: var(--muted); }
+.wal-records table.kv { margin-bottom: 8px; }
+
 .heap-and-index { display: grid; gap: 4px; }
 .index-tree { display: grid; gap: 14px; margin-top: 8px; }
 .index-level { display: flex; gap: 10px; flex-wrap: wrap; }
