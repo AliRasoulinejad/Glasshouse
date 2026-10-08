@@ -164,6 +164,26 @@ button:focus-visible, select:focus-visible { outline: 2px solid var(--accent); o
 .heap-detail { min-width: 0; }
 .heap-detail h3 { font-size: 14px; }
 
+.heap-and-index { display: grid; gap: 4px; }
+.index-tree { display: grid; gap: 14px; margin-top: 8px; }
+.index-level { display: flex; gap: 10px; flex-wrap: wrap; }
+.index-page {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: var(--panel);
+  min-width: 160px;
+}
+.index-items { display: flex; gap: 4px; flex-wrap: wrap; }
+.index-chip {
+  font: 11px var(--mono);
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--cell);
+  border: 1px solid var(--line);
+}
+.index-chip.dead { background: var(--cell); color: var(--muted); text-decoration: line-through; }
+
 table.kv { border-collapse: collapse; width: 100%; font: 12px/1.5 var(--mono); }
 table.kv th, table.kv td {
   text-align: left;
