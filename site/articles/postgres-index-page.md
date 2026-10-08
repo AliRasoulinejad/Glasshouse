@@ -18,8 +18,11 @@ actually grows as you insert.
 
 Each box below is one index page: its block number, whether it's the root,
 an internal page, or a leaf, and its level (0 is the leaf level). The chips
-inside are key prefixes — hover one for its exact position and the heap
-tuple (or child page) it points to.
+inside are key prefixes — hover one for its position and, for a real index
+entry, the heap tuple (or child page) it points to. The first chip on a page
+is sometimes not a real entry at all: it can be a copy of the page's upper
+bound (a "high key") or, on the leftmost page of a level, an empty
+"minus infinity" sentinel — neither one points anywhere.
 
 ## Start the lab
 
@@ -42,14 +45,18 @@ starting the other.
 
 Press **insert_rows** a few times. Each press adds 10 rows; watch the
 index's leaf pages fill and, eventually, split into two as a page runs out
-of room — a new leaf box appears below, and the tree grows a level once a
-single root page can no longer hold all the leaf pointers.
+of room — a new leaf box appears next to its sibling, at the same level.
+The very first leaf split also grows the tree a level: the root leaf splits
+into two leaves, and a brand-new root is created above them immediately —
+it doesn't take several splits to fill up a root.
 
-**update_rows** and **delete_rows** mark heap tuples dead without touching
-the index's keys directly — Postgres only cleans up the index entry once
-the row is vacuumed. **vacuum_full** rewrites the table and the index
-together, so dead entries disappear from both the heap page above and the
-index pages below at the same time.
+**update_rows** sets `payload`, the indexed column, so every update is a
+non-HOT update: it marks the old heap tuple dead *and* inserts a new index
+entry for the new value — watch for a new chip on each press. **delete_rows**
+marks heap tuples dead without touching the index; Postgres only cleans up
+the index entry once the row is vacuumed. **vacuum_full** rewrites the table
+and the index together, so dead entries disappear from both the heap page
+above and the index pages below at the same time.
 
 ## When you're done
 

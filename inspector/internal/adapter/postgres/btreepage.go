@@ -13,8 +13,11 @@ import (
 )
 
 // IndexItem is one entry on a B-tree index page. On an internal or root page,
-// CTID encodes the downlink to a child block as "(block,0)"; on a leaf page
-// it is the real heap tuple pointer the index entry points to.
+// CTID encodes the downlink to a child block as "(block,offset)"; the offset
+// is not meaningful for a downlink (it holds the key's attribute count on
+// most items, 0 only for the leftmost "minus infinity" item) and is ignored.
+// On a leaf page CTID is the real heap tuple pointer the index entry points
+// to.
 type IndexItem struct {
 	ItemOffset int    `json:"itemoffset"`
 	CTID       string `json:"ctid"`
@@ -61,8 +64,8 @@ func pageType(level, rootLevel int) string {
 }
 
 // downlinkBlock parses the child block number out of an internal page
-// item's ctid, formatted by pageinspect as "(block,offset)". The offset
-// part is unused for a downlink.
+// item's ctid, formatted by pageinspect as "(block,offset)". The offset is
+// not meaningful for a downlink and is ignored.
 func downlinkBlock(ctid string) (int, error) {
 	s := strings.Trim(ctid, "()")
 	block, _, ok := strings.Cut(s, ",")

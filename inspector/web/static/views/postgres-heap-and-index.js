@@ -4,7 +4,7 @@ import { renderHeapSection } from './postgres-heap-page.js';
 function keyChip(item) {
   const chip = document.createElement('span');
   chip.className = 'index-chip' + (item.dead ? ' dead' : '');
-  chip.textContent = item.data_hex ? item.data_hex.slice(0, 8) : '(none)';
+  chip.textContent = item.data_hex ? item.data_hex.slice(0, 23) : '(none)';
   chip.title = `itemoffset=${item.itemoffset} ctid=${item.ctid}` +
     (item.dead ? ' (dead)' : '');
   return chip;

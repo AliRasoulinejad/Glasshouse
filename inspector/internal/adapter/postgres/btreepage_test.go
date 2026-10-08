@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"errors"
+	"strconv"
 	"testing"
 )
 
@@ -77,13 +78,13 @@ func TestWalkIndexTwoLevelTreeDescendsToLeaves(t *testing.T) {
 }
 
 func TestWalkIndexTruncatesWhenChildrenExceedCap(t *testing.T) {
-	// Root has 15 children (one more than fits once the root itself is
+	// Root has 15 children (four more than fit once the root itself is
 	// counted against the 12-page cap: 1 root + 11 leaves = 12).
 	root := make([]IndexItem, 15)
 	pages := map[int][]IndexItem{}
 	for i := range root {
 		child := i + 2
-		root[i] = IndexItem{ItemOffset: i + 1, CTID: "(" + itoa(child) + ",0)"}
+		root[i] = IndexItem{ItemOffset: i + 1, CTID: "(" + strconv.Itoa(child) + ",0)"}
 		pages[child] = []IndexItem{{ItemOffset: 1, CTID: "(0,1)"}}
 	}
 	pages[1] = root
@@ -106,7 +107,7 @@ func TestWalkIndexExactlyFillingCapIsNotTruncated(t *testing.T) {
 	pages := map[int][]IndexItem{}
 	for i := range root {
 		child := i + 2
-		root[i] = IndexItem{ItemOffset: i + 1, CTID: "(" + itoa(child) + ",0)"}
+		root[i] = IndexItem{ItemOffset: i + 1, CTID: "(" + strconv.Itoa(child) + ",0)"}
 		pages[child] = []IndexItem{{ItemOffset: 1, CTID: "(0,1)"}}
 	}
 	pages[1] = root
@@ -131,23 +132,4 @@ func TestWalkIndexRejectsMalformedCTID(t *testing.T) {
 	if err == nil {
 		t.Fatal("want error for malformed ctid")
 	}
-}
-
-func itoa(n int) string {
-	if n == 0 {
-		return "0"
-	}
-	neg := n < 0
-	if neg {
-		n = -n
-	}
-	var b []byte
-	for n > 0 {
-		b = append([]byte{byte('0' + n%10)}, b...)
-		n /= 10
-	}
-	if neg {
-		b = append([]byte{'-'}, b...)
-	}
-	return string(b)
 }
