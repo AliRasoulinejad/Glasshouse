@@ -6,12 +6,14 @@
 #   make stack-down   stop the stack and delete its data
 #   make run-postgres start the Inspector on the host instead (stop the stack first: same port)
 #   make demo         before/after snapshot around an insert (needs the stack or run-postgres)
+#   make site-build   build the static articles into site/dist (validates lab actions)
 #
 # Go runs on the host by default. If Go is not installed, use Docker:
 #   make test USE_DOCKER=1
 
 INSPECTOR_DIR := inspector
 PG_DIR        := adapters/postgres
+SITE_DIR      := site
 ADDR          ?= 127.0.0.1:8765
 ORIGIN        ?= https://article.example
 PG_DSN        ?= postgres://glasshouse_inspector:glasshouse-local-inspector@127.0.0.1:55432/glasshouse?sslmode=disable
@@ -23,14 +25,18 @@ GO_IMAGE   ?= golang:1.24-alpine
 
 ifeq ($(USE_DOCKER),1)
   # Run the Go toolchain in a container, mounting the repo so output lands here.
-  GO    = docker run --rm -u $$(id -u):$$(id -g) -e HOME=/tmp -e GOPATH=/tmp/gopath -e GOCACHE=/tmp/gocache -e CGO_ENABLED=0 -v $(CURDIR)/$(INSPECTOR_DIR):/src -w /src $(GO_IMAGE) go
-  GOFMT = docker run --rm -u $$(id -u):$$(id -g) -e HOME=/tmp -v $(CURDIR)/$(INSPECTOR_DIR):/src -w /src $(GO_IMAGE) gofmt
+  GO      = docker run --rm -u $$(id -u):$$(id -g) -e HOME=/tmp -e GOPATH=/tmp/gopath -e GOCACHE=/tmp/gocache -e CGO_ENABLED=0 -v $(CURDIR)/$(INSPECTOR_DIR):/src -w /src $(GO_IMAGE) go
+  GOFMT   = docker run --rm -u $$(id -u):$$(id -g) -e HOME=/tmp -v $(CURDIR)/$(INSPECTOR_DIR):/src -w /src $(GO_IMAGE) gofmt
+  # Mounts site/ instead of inspector/: the site module is a separate Go
+  # module, so it needs its own container mount.
+  GO_SITE = docker run --rm -u $$(id -u):$$(id -g) -e HOME=/tmp -e GOPATH=/tmp/gopath -e GOCACHE=/tmp/gocache -e CGO_ENABLED=0 -v $(CURDIR)/$(SITE_DIR):/src -w /src $(GO_IMAGE) go
 else
-  GO    = go
-  GOFMT = gofmt
+  GO      = go
+  GOFMT   = gofmt
+  GO_SITE = go
 endif
 
-.PHONY: help test vet fmt-check fmt build run-mock run-postgres stack-up stack-down stack-logs demo clean
+.PHONY: help test vet fmt-check fmt build run-mock run-postgres stack-up stack-down stack-logs demo site-actions site-build clean
 
 help:
 	@grep -E '^#   make ' Makefile | sed 's/^#   //'
@@ -78,6 +84,15 @@ stack-logs:
 
 demo:
 	sh $(PG_DIR)/demo.sh
+
+# ---- site -------------------------------------------------------------------
+
+site-actions:
+	cd $(INSPECTOR_DIR) && $(GO) run ./cmd/inspector -list-actions -adapter postgres > ../site/actions.txt
+
+site-build: site-actions
+	cd $(SITE_DIR) && $(GO_SITE) run ./cmd/build -articles articles -out dist -actions actions.txt
+	@echo "site built in site/dist"
 
 # ---- misc -------------------------------------------------------------------
 

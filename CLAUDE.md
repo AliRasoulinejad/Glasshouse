@@ -19,10 +19,12 @@ multi-tenant backend.
   `demo.sh`, README.
 - `schema/README.md` — snapshot/event contract, schema version 1.
 - `samples/postgres.heap_page.json` — static sample, same envelope as the API.
+- `site/` — static articles, built by `make site-build`; plain files, no backend.
 - `Makefile` — the entry point. Run `make help`.
 
-Not built yet (deferred, do not start unless asked): the Website (Phase 1),
-the Postgres index and replication adapters (3b/3c), and Redis/Mongo/MinIO.
+Not built yet (deferred): the Postgres index and replication adapters (3b/3c),
+and Redis/Mongo/MinIO. The Website is in progress; see
+`docs/superpowers/specs/2026-10-04-website-design.md`.
 
 ## Commands
 
@@ -49,6 +51,8 @@ the Postgres index and replication adapters (3b/3c), and Redis/Mongo/MinIO.
   binds only integers.
 - The Inspector reads its DSN from `GLASSHOUSE_PG_DSN`, never from argv.
 - The viewer writes API data with `textContent` only, never `innerHTML`.
+- Compose is never run from the browser. The Inspector has no Docker access;
+  the reader starts the lab in their own terminal.
 
 ## Gotchas we already hit
 
