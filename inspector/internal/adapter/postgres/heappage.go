@@ -103,6 +103,8 @@ type Adapter struct {
 	seq       uint64
 	prev      map[int]Item
 	prevBlock int
+	prevLSN   string // "" until the first tick completes
+	tick      uint64 // increments once per poll tick, for correlation_id
 }
 
 // New returns an adapter that polls every interval.
@@ -275,6 +277,83 @@ func parseBlockRefBlocks(blockRef string, relfilenode uint32) []int {
 	return blocks
 }
 
+// walRecordsQuery lists every WAL record in the given LSN range that
+// touched at least one block (checkpoints and similar records, which touch
+// none, are excluded by the WHERE clause). relfilenode and fork filtering
+// happens in Go, since block_ref is unstructured text.
+const walRecordsQuery = `
+	SELECT start_lsn::text, resource_manager, record_type, record_length, description, block_ref
+	FROM pg_get_wal_records_info($1::pg_lsn, $2::pg_lsn)
+	WHERE block_ref IS NOT NULL`
+
+// readWALRecords returns the WAL records in (prevLSN, currLSN] that touched
+// Relation's main fork. The relfilenode is resolved fresh on every call,
+// not cached, because VACUUM FULL (one of the adapter's own actions)
+// rewrites the relation onto a new relfilenode.
+func (a *Adapter) readWALRecords(ctx context.Context, prevLSN, currLSN string) ([]WALRecord, error) {
+	pool, err := a.getPool()
+	if err != nil {
+		return nil, err
+	}
+
+	var relfilenode uint32
+	err = pool.QueryRow(ctx,
+		`SELECT pg_relation_filenode($1::regclass)`, Relation,
+	).Scan(&relfilenode)
+	if err != nil {
+		return nil, fmt.Errorf("postgres: relation filenode: %w", err)
+	}
+
+	rows, err := pool.Query(ctx, walRecordsQuery, prevLSN, currLSN)
+	if err != nil {
+		return nil, fmt.Errorf("postgres: wal records: %w", err)
+	}
+	defer rows.Close()
+
+	var out []WALRecord
+	for rows.Next() {
+		var lsn, rmgr, recordType, description, blockRef string
+		var length int
+		if err := rows.Scan(&lsn, &rmgr, &recordType, &length, &description, &blockRef); err != nil {
+			return nil, fmt.Errorf("postgres: scan wal record: %w", err)
+		}
+		for _, blk := range parseBlockRefBlocks(blockRef, relfilenode) {
+			out = append(out, WALRecord{
+				LSN: lsn, Rmgr: rmgr, RecordType: recordType,
+				Block: blk, Length: length, Description: description,
+			})
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("postgres: wal records rows: %w", err)
+	}
+	return out, nil
+}
+
+// emitWALEvents turns records into adapter.Events of kind "wal_record".
+// Records sharing a block get the same correlation_id, scoped to tick, so
+// the viewer can group them with the heap-diff event from the same block
+// and tick.
+func (a *Adapter) emitWALEvents(records []WALRecord, tick uint64, now time.Time) []adapter.Event {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	out := make([]adapter.Event, 0, len(records))
+	for _, rec := range records {
+		a.seq++
+		out = append(out, adapter.Event{
+			ID:            fmt.Sprintf("%s:%d", a.source, a.seq),
+			Seq:           a.seq,
+			Timestamp:     now,
+			Source:        a.source,
+			Kind:          "wal_record",
+			CorrelationID: fmt.Sprintf("%s:%d:%d", a.source, rec.Block, tick),
+			Detail:        rec,
+		})
+	}
+	return out
+}
+
 // readPages pulls the relation's last few blocks, oldest first, so the view
 // can show rows spilling from one page into the next.
 func (a *Adapter) readPages(ctx context.Context) (HeapPages, error) {
@@ -349,7 +428,29 @@ func (a *Adapter) StreamEvents(ctx context.Context) (<-chan adapter.Event, <-cha
 					return
 				}
 				last := pages.Pages[len(pages.Pages)-1]
-				for _, ev := range a.diff(last, now.UTC()) {
+
+				a.mu.Lock()
+				prevLSN := a.prevLSN
+				tick := a.tick
+				a.tick++
+				a.prevLSN = last.Header.LSN
+				a.mu.Unlock()
+
+				var tickEvents []adapter.Event
+				if prevLSN != "" && prevLSN != last.Header.LSN {
+					records, err := a.readWALRecords(ctx, prevLSN, last.Header.LSN)
+					if err != nil {
+						if ctx.Err() == nil {
+							errs <- err
+						}
+						return
+					}
+					tickEvents = append(tickEvents, a.emitWALEvents(records, tick, now.UTC())...)
+				}
+				corrID := fmt.Sprintf("%s:%d:%d", a.source, last.Block, tick)
+				tickEvents = append(tickEvents, a.diff(last, now.UTC(), corrID)...)
+
+				for _, ev := range tickEvents {
 					select {
 					case events <- ev:
 					case <-ctx.Done():
@@ -365,7 +466,9 @@ func (a *Adapter) StreamEvents(ctx context.Context) (<-chan adapter.Event, <-cha
 // diff compares the last block with the previous read and returns events for
 // new tuples, for tuples whose xmax was set (a delete or update), and for
 // tuples that vanished from the same block (a vacuum reclaiming a dead tuple).
-func (a *Adapter) diff(page Page, now time.Time) []adapter.Event {
+// Every event gets correlationID, so the viewer can group them with any WAL
+// records from the same tick and block.
+func (a *Adapter) diff(page Page, now time.Time, correlationID string) []adapter.Event {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
@@ -378,12 +481,13 @@ func (a *Adapter) diff(page Page, now time.Time) []adapter.Event {
 	emit := func(kind string, detail any) {
 		a.seq++
 		out = append(out, adapter.Event{
-			ID:        fmt.Sprintf("%s:%d", a.source, a.seq),
-			Seq:       a.seq,
-			Timestamp: now,
-			Source:    a.source,
-			Kind:      kind,
-			Detail:    detail,
+			ID:            fmt.Sprintf("%s:%d", a.source, a.seq),
+			Seq:           a.seq,
+			Timestamp:     now,
+			Source:        a.source,
+			Kind:          kind,
+			CorrelationID: correlationID,
+			Detail:        detail,
 		})
 	}
 
