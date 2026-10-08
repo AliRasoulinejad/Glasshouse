@@ -12,7 +12,9 @@ import { registerView } from './registry.js';
 //   [special, size)    special space (empty for heap pages)
 //
 // Tuples are drawn at their lp_off/lp_len. Dead and redirect pointers still
-// occupy space, so they are drawn too, in a muted colour.
+// occupy space, so they are drawn too, in a muted colour. A tuple whose
+// t_xmax is set is also dead (an update or delete has superseded it) even
+// though its line pointer stays LP_NORMAL until a prune or vacuum runs.
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const BYTES_PER_ROW = 128;
@@ -115,7 +117,7 @@ function buildMap(page, focusLP, onEnter) {
     if (!it.lp_len) return;
     const start = it.lp_off;
     const end = it.lp_off + it.lp_len;
-    const dead = it.lp_flags !== 1;
+    const dead = it.lp_flags !== 1 || it.t_xmax !== '0';
     const fill = it.lp === focusLP
       ? COLORS.focus
       : dead ? COLORS.dead : i % 2 === 0 ? COLORS.tupleA : COLORS.tupleB;
