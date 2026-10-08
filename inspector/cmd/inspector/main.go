@@ -6,10 +6,12 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"io/fs"
 	"log/slog"
 	"os"
 	"os/signal"
+	"sort"
 	"strings"
 	"syscall"
 	"time"
@@ -34,7 +36,16 @@ func main() {
 	containerMode := flag.Bool("container", false, "allow binding 0.0.0.0 inside a container; the host must publish on 127.0.0.1 only")
 	var origins multiFlag
 	flag.Var(&origins, "origin", "article origin allowed to call the API (repeatable), e.g. https://example.com")
+	listFlag := flag.Bool("list-actions", false, "print the adapter's action names and exit")
 	flag.Parse()
+
+	if *listFlag {
+		if err := listActions(*adapterName, os.Stdout); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		return
+	}
 
 	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	if err := run(*addr, *adapterName, origins, *containerMode, logger); err != nil {
@@ -117,4 +128,27 @@ func buildAdapter(name string) (adapter.Adapter, adapter.Target, error) {
 	default:
 		return nil, adapter.Target{}, fmt.Errorf("unknown adapter %q", name)
 	}
+}
+
+// listActions prints the action names an adapter exposes, one per line,
+// sorted. It needs no target, so the site build can run without a database.
+func listActions(name string, w io.Writer) error {
+	var a adapter.Actioner
+	switch name {
+	case "mock":
+		a = mock.New(time.Second)
+	case "postgres":
+		a = postgres.New(500 * time.Millisecond)
+	default:
+		return fmt.Errorf("unknown adapter %q", name)
+	}
+	names := make([]string, 0)
+	for n := range a.Actions() {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+	for _, n := range names {
+		fmt.Fprintln(w, n)
+	}
+	return nil
 }
