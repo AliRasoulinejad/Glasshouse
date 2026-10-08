@@ -24,9 +24,11 @@ multi-tenant backend.
   `main` that touches `site/` or the Inspector's action list.
 - `Makefile` — the entry point. Run `make help`.
 
-Not built yet (deferred): the Postgres index and replication adapters (3b/3c),
-and Redis/Mongo/MinIO. The Website is in progress; see
-`docs/superpowers/specs/2026-10-04-website-design.md`.
+Not built yet (deferred): the Postgres replication adapter (3c), and
+Redis/Mongo/MinIO. The Postgres index adapter (3b) is built — see
+`site/articles/postgres-index-page.md` and
+`inspector/internal/adapter/postgres/btreepage.go`. The Website is in
+progress; see `docs/superpowers/specs/2026-10-04-website-design.md`.
 
 ## Commands
 
@@ -84,6 +86,9 @@ and Redis/Mongo/MinIO. The Website is in progress; see
 - `ctid::point` fails ("cannot cast type tid to point"). Go through text:
   `ctid::text::point`. Used to find rows on the relation's current last block
   so `update_rows`/`delete_rows` act on what the viewer is showing.
+- `bt_page_items`'s `ctid` column on an internal or root page encodes the
+  downlink as `(block,0)` — the offset part is unused. `downlinkBlock` in
+  `btreepage.go` parses just the block.
 - `VACUUM (FULL)` needs the PG17 `MAINTAIN` privilege (granted to
   `glasshouse_inspector` in `compose.yml`), not superuser.
 - The adapter always reads the relation's *last* block (`lastBlock` in
