@@ -10,9 +10,10 @@ function keyChip(item) {
   return chip;
 }
 
-function pageBox(page) {
+function pageBox(page, elementsByBlock) {
   const box = document.createElement('div');
   box.className = 'index-page';
+  elementsByBlock.set(page.block, box);
 
   const heading = document.createElement('p');
   heading.className = 'small muted';
@@ -30,9 +31,37 @@ function pageBox(page) {
   return box;
 }
 
+// downlinkBlock parses the child block number out of an internal page
+// item's ctid, formatted by pageinspect as "(block,offset)" — mirrors
+// btreepage.go's downlinkBlock. Returns null if it doesn't parse.
+function downlinkBlock(ctid) {
+  const match = /^\((\d+),\d+\)$/.exec(ctid ?? '');
+  if (!match) return null;
+  return Number(match[1]);
+}
+
+// treeEdges returns one {parent, child} block-number pair per downlink on
+// an internal or root page, skipping any child block the walk didn't
+// actually include (it may have been cut off by the page cap).
+function treeEdges(indexPages) {
+  const known = new Set(indexPages.pages.map((p) => p.block));
+  const edges = [];
+  for (const page of indexPages.pages) {
+    if (page.level === 0) continue;
+    for (const item of page.items) {
+      const child = downlinkBlock(item.ctid);
+      if (child !== null && known.has(child)) {
+        edges.push({ parent: page.block, child });
+      }
+    }
+  }
+  return edges;
+}
+
 function treeDiagram(indexPages) {
   const wrap = document.createElement('div');
   wrap.className = 'index-tree';
+  const elementsByBlock = new Map();
 
   const byLevel = new Map();
   for (const page of indexPages.pages) {
@@ -45,7 +74,7 @@ function treeDiagram(indexPages) {
     const row = document.createElement('div');
     row.className = 'index-level';
     for (const page of byLevel.get(level)) {
-      row.append(pageBox(page));
+      row.append(pageBox(page, elementsByBlock));
     }
     wrap.append(row);
   }
@@ -56,7 +85,39 @@ function treeDiagram(indexPages) {
     note.textContent = 'More index pages exist beyond what is shown here.';
     wrap.append(note);
   }
-  return wrap;
+
+  return { element: wrap, elementsByBlock, edges: treeEdges(indexPages) };
+}
+
+// drawConnectors overlays one SVG line per parent/child edge, positioned
+// from the boxes' actual rendered rects. Must run only after `treeWrap.element`
+// is attached to the live document — box positions aren't known before layout.
+const SVG_NS = 'http://www.w3.org/2000/svg';
+function drawConnectors(treeWrap) {
+  if (treeWrap.edges.length === 0) return;
+
+  const containerRect = treeWrap.element.getBoundingClientRect();
+  const svg = document.createElementNS(SVG_NS, 'svg');
+  svg.setAttribute('class', 'index-tree-lines');
+  svg.setAttribute('width', String(containerRect.width));
+  svg.setAttribute('height', String(containerRect.height));
+
+  for (const { parent, child } of treeWrap.edges) {
+    const parentEl = treeWrap.elementsByBlock.get(parent);
+    const childEl = treeWrap.elementsByBlock.get(child);
+    if (!parentEl || !childEl) continue;
+    const p = parentEl.getBoundingClientRect();
+    const c = childEl.getBoundingClientRect();
+
+    const line = document.createElementNS(SVG_NS, 'line');
+    line.setAttribute('x1', String(p.left + p.width / 2 - containerRect.left));
+    line.setAttribute('y1', String(p.bottom - containerRect.top));
+    line.setAttribute('x2', String(c.left + c.width / 2 - containerRect.left));
+    line.setAttribute('y2', String(c.top - containerRect.top));
+    svg.append(line);
+  }
+
+  treeWrap.element.prepend(svg);
 }
 
 registerView('postgres.heap_and_index', {
@@ -74,7 +135,9 @@ registerView('postgres.heap_and_index', {
     indexHeading.style.margin = '20px 0 8px';
     indexHeading.textContent = `Index: ${data.index.index_name}`;
 
-    wrap.append(heapSection, indexHeading, treeDiagram(data.index));
+    const treeWrap = treeDiagram(data.index);
+    wrap.append(heapSection, indexHeading, treeWrap.element);
     container.replaceChildren(wrap);
+    drawConnectors(treeWrap);
   },
 });

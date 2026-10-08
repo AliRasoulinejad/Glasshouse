@@ -165,15 +165,24 @@ button:focus-visible, select:focus-visible { outline: 2px solid var(--accent); o
 .heap-detail h3 { font-size: 14px; }
 
 .heap-and-index { display: grid; gap: 4px; }
-.index-tree { display: grid; gap: 14px; margin-top: 8px; }
-.index-level { display: flex; gap: 10px; flex-wrap: wrap; }
+.index-tree { position: relative; display: grid; gap: 14px; margin-top: 8px; }
+.index-level { display: flex; gap: 10px; flex-wrap: wrap; position: relative; z-index: 1; }
 .index-page {
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 8px 10px;
   background: var(--panel);
   min-width: 160px;
+  position: relative;
+  z-index: 1;
 }
+.index-tree-lines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+.index-tree-lines line { stroke: var(--line); stroke-width: 1.5; }
 .index-items { display: flex; gap: 4px; flex-wrap: wrap; }
 .index-chip {
   font: 11px var(--mono);
