@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Glasshouse Inspector &mdash; field glossary</title>
+  <link rel="stylesheet" href="shell.css">
+  <style>
+    .glossary { max-width: 760px; margin: 0 auto; padding: 16px 20px 48px; }
+    .glossary h1 { font-size: 20px; margin: 0 0 4px; }
+    .glossary .intro { color: var(--muted); margin: 0 0 24px; }
+    .glossary section { margin-bottom: 28px; }
+    .glossary h2 { font-size: 14px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 10px; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+    dl.terms { margin: 0; }
+    dl.terms dt { font: 13px/1.5 var(--mono); color: var(--accent); margin-top: 14px; scroll-margin-top: 16px; }
+    dl.terms dt:target { background: var(--cell-hi); border-radius: 4px; padding: 2px 4px; margin-left: -4px; }
+    dl.terms dd { margin: 4px 0 0; font-size: 14px; line-height: 1.5; }
+    .back { display: inline-block; margin-bottom: 16px; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">Glasshouse <span class="muted">Inspector</span></div>
+    <div class="target muted">Field glossary</div>
+  </header>
+
+  <main class="glossary">
+    <a class="back" href="/">&larr; Back to the Inspector</a>
+    <h1>Heap page field glossary</h1>
+    <p class="intro">
+      Plain definitions for the fields the byte map shows. Each term appears
+      in the page header, in an item pointer, or in a tuple header. Open this
+      page from a field name in the Inspector to go straight to its entry.
+    </p>
+
+    <section>
+      <h2>Page header</h2>
+      <dl class="terms">
+        <dt id="lsn">lsn</dt>
+        <dd>The LSN identifies the last WAL (write-ahead log) record that changed this page. PostgreSQL uses it to keep the page and the log in step.</dd>
+
+        <dt id="checksum">checksum</dt>
+        <dd>The checksum value protects the page data against storage corruption. It is 0 if the cluster was created without checksums.</dd>
+
+        <dt id="flags">flags</dt>
+        <dd>The flags show the page status, for example whether the page has free space registered in the free space map, or has a pending full-page image in the WAL.</dd>
+
+        <dt id="lower">lower</dt>
+        <dd>The lower value is a byte offset. It marks where the item pointer list ends and the free space region starts.</dd>
+
+        <dt id="upper">upper</dt>
+        <dd>The upper value is a byte offset. It marks where the free space region ends and tuple data starts. PostgreSQL packs tuples from the end of the page toward the start.</dd>
+
+        <dt id="special">special</dt>
+        <dd>The special value is a byte offset. It marks the start of the special area at the end of the page. A heap page has no special area, so this value equals the page size.</dd>
+
+        <dt id="page_size">page_size</dt>
+        <dd>The page size is the total size of the page in bytes. PostgreSQL uses 8192 bytes by default.</dd>
+
+        <dt id="version">version</dt>
+        <dd>The version number identifies the layout format of the page.</dd>
+
+        <dt id="prune_xid">prune_xid</dt>
+        <dd>The prune_xid value is the oldest transaction ID that may still need pruning on this page. PostgreSQL uses it to decide when HOT pruning can run.</dd>
+
+        <dt id="free_space">free_space</dt>
+        <dd>The free_space value is the number of bytes open between lower and upper, for new item pointers and new tuple data.</dd>
+      </dl>
+    </section>
+
+    <section>
+      <h2>Item pointer</h2>
+      <dl class="terms">
+        <dt id="lp">lp</dt>
+        <dd>The lp value is the position of this pointer in the item pointer list. The list starts at 1. The block number and the lp value together identify one row; this pair is the row's ctid.</dd>
+
+        <dt id="lp_off">lp_off</dt>
+        <dd>The lp_off value is the byte offset within the page where this tuple's data starts.</dd>
+
+        <dt id="lp_len">lp_len</dt>
+        <dd>The lp_len value is the length of the stored tuple in bytes. It is 0 if the pointer is not in use.</dd>
+
+        <dt id="lp_flags">lp_flags</dt>
+        <dd>The lp_flags value shows the state of the pointer. 0 means the pointer is not in use. 1 means normal: the pointer leads to a live tuple. 2 means redirect: the pointer leads to a newer pointer, set after a HOT update. 3 means dead: the tuple is gone and waits for VACUUM to reclaim the pointer.</dd>
+      </dl>
+    </section>
+
+    <section>
+      <h2>Tuple header</h2>
+      <dl class="terms">
+        <dt id="t_xmin">t_xmin</dt>
+        <dd>The t_xmin value is the ID of the transaction that added this tuple. A later transaction can see this tuple once the t_xmin transaction has committed.</dd>
+
+        <dt id="t_xmax">t_xmax</dt>
+        <dd>The t_xmax value is the ID of the transaction that removed or changed this tuple. A value of 0 means no transaction has done so; the tuple is still live.</dd>
+
+        <dt id="t_ctid">t_ctid</dt>
+        <dd>The t_ctid value points to the current version of this tuple. It points to itself if this row is live. It points to a newer tuple's block and lp if an UPDATE replaced this row.</dd>
+
+        <dt id="t_infomask">t_infomask</dt>
+        <dd>The t_infomask value is a set of flag bits about the tuple, for example whether t_xmin and t_xmax are known to be committed, and whether any column holds a null value.</dd>
+
+        <dt id="t_infomask2">t_infomask2</dt>
+        <dd>The t_infomask2 value is a second set of flag bits. Its low bits also store the number of columns in the tuple.</dd>
+
+        <dt id="t_hoff">t_hoff</dt>
+        <dd>The t_hoff value is the length of the tuple header in bytes. Column data starts right after this offset.</dd>
+
+        <dt id="t_bits">t_bits</dt>
+        <dd>The t_bits value is the null bitmap, one bit per column, marking which columns are null. "(none)" means no column is null, so PostgreSQL left the bitmap out.</dd>
+
+        <dt id="t_data_hex">t_data_hex</dt>
+        <dd>The t_data_hex value shows the raw bytes of the tuple's column data, after the header, in hexadecimal format.</dd>
+      </dl>
+    </section>
+  </main>
+</body>
+</html>

@@ -166,6 +166,117 @@ function legend() {
   return el;
 }
 
+// Hover text for field names in the detail table, keyed by field name as it
+// appears in fieldRows(). Covers page header, item pointer, and tuple header
+// fields from pageinspect's heap_page_items()/page_header().
+//
+// Wording follows ASD-STE100 (Simplified Technical English): short sentences,
+// active voice, one idea per sentence, and the same word for the same thing
+// every time (page, row, tuple, pointer). Full definitions are in glossary.html.
+const FIELD_INFO = {
+  lsn: 'The LSN identifies the last WAL record that changed this page.',
+  checksum: 'The checksum value protects the page data. It is 0 if checksums are off.',
+  flags: 'The flags show the page status. For example, they show if free space is registered.',
+  lower: 'The lower value shows where the item pointer list ends and free space starts.',
+  upper: 'The upper value shows where free space ends and tuple data starts.',
+  special: 'The special value shows where the special area starts. For a heap page, this area is empty.',
+  page_size: 'The page size is the total size of the page in bytes. The default value is 8192.',
+  version: 'The version number shows the layout format of the page.',
+  prune_xid: 'The prune_xid value is the oldest transaction ID that may still need pruning on this page.',
+  free_space: 'The free_space value is the number of bytes open for new pointers and tuple data.',
+  lp: 'The lp value is the position of this pointer in the item pointer list. The block number and the lp value together identify the row.',
+  lp_off: 'The lp_off value is the byte offset of the tuple data in the page.',
+  lp_len: 'The lp_len value is the length of the tuple in bytes. It is 0 if the pointer is not in use.',
+  lp_flags: 'The lp_flags value shows the pointer state: 0 not in use, 1 normal, 2 redirect, 3 dead.',
+  t_xmin: 'The t_xmin value is the ID of the transaction that added this tuple.',
+  t_xmax: 'The t_xmax value is the ID of the transaction that removed or changed this tuple. 0 means the tuple is still live.',
+  t_ctid: 'The t_ctid value points to the current version of this tuple. It points to a new tuple if this row was updated.',
+  t_infomask: 'The t_infomask value is a set of flags about the tuple, for example commit status.',
+  t_infomask2: 'The t_infomask2 value is a second set of flags. It also stores the number of columns.',
+  t_hoff: 'The t_hoff value is the length of the tuple header in bytes. Column data starts after it.',
+  t_bits: 'The t_bits value marks which columns are null. (none) means no column is null.',
+  t_data_hex: 'The t_data_hex value shows the raw column data in hex format.',
+};
+
+const GLOSSARY_URL = 'glossary.html';
+
+// A JS-rendered tooltip, not the native `title` attribute: the native one
+// only appears after the browser's own hover-dwell timer, which synthetic or
+// automated pointer events (e.g. a screenshot tool moving the cursor) do not
+// reliably trigger. This one shows on the mouseenter/focus event itself.
+let tooltipEl = null;
+let tooltipHideTimer = null;
+
+function tooltip() {
+  if (tooltipEl) return tooltipEl;
+  tooltipEl = document.createElement('div');
+  tooltipEl.setAttribute('role', 'tooltip');
+  Object.assign(tooltipEl.style, {
+    position: 'fixed',
+    zIndex: '1000',
+    maxWidth: '280px',
+    padding: '6px 10px',
+    borderRadius: '6px',
+    border: '1px solid var(--line)',
+    background: 'var(--panel)',
+    color: 'var(--ink)',
+    font: '12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+    boxShadow: '0 2px 8px rgba(0,0,0,.3)',
+    display: 'none',
+  });
+  // The pointer can move from the field name onto the tooltip to reach the
+  // glossary link, so cancel the pending hide while it is over either one.
+  tooltipEl.addEventListener('mouseenter', cancelHideTooltip);
+  tooltipEl.addEventListener('mouseleave', hideTooltip);
+  document.body.append(tooltipEl);
+  return tooltipEl;
+}
+
+function showTooltip(target, text, key) {
+  cancelHideTooltip();
+  const el = tooltip();
+  el.replaceChildren();
+  const p = document.createElement('p');
+  p.style.margin = '0 0 4px';
+  p.textContent = text;
+  const a = document.createElement('a');
+  a.href = `${GLOSSARY_URL}#${key}`;
+  a.target = '_blank';
+  a.rel = 'noopener';
+  a.textContent = 'Glossary ↗';
+  a.style.color = 'var(--accent)';
+  el.append(p, a);
+  el.style.display = 'block';
+  const r = target.getBoundingClientRect();
+  let left = r.left;
+  el.style.top = `${r.bottom + 6}px`;
+  el.style.left = `${left}px`;
+  // Keep it on screen once its size is known.
+  requestAnimationFrame(() => {
+    const tr = el.getBoundingClientRect();
+    if (tr.right > window.innerWidth - 8) {
+      left = Math.max(8, window.innerWidth - tr.width - 8);
+      el.style.left = `${left}px`;
+    }
+    if (tr.bottom > window.innerHeight - 8) {
+      el.style.top = `${r.top - tr.height - 6}px`;
+    }
+  });
+}
+
+function cancelHideTooltip() {
+  clearTimeout(tooltipHideTimer);
+  tooltipHideTimer = null;
+}
+
+function hideTooltip() {
+  cancelHideTooltip();
+  // A short delay gives the pointer time to reach the tooltip itself.
+  tooltipHideTimer = setTimeout(() => {
+    if (tooltipEl) tooltipEl.style.display = 'none';
+  }, 150);
+}
+
 function table(rows) {
   const t = document.createElement('table');
   t.className = 'kv';
@@ -173,6 +284,15 @@ function table(rows) {
     const tr = document.createElement('tr');
     const th = document.createElement('th');
     th.textContent = k;
+    const info = FIELD_INFO[k];
+    if (info) {
+      th.style.cursor = 'help';
+      th.tabIndex = 0;
+      th.addEventListener('mouseenter', () => showTooltip(th, info, k));
+      th.addEventListener('mouseleave', hideTooltip);
+      th.addEventListener('focus', () => showTooltip(th, info, k));
+      th.addEventListener('blur', hideTooltip);
+    }
     const td = document.createElement('td');
     td.textContent = v;
     tr.append(th, td);
