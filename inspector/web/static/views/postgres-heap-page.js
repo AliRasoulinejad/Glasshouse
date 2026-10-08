@@ -271,10 +271,13 @@ function cancelHideTooltip() {
 
 function hideTooltip() {
   cancelHideTooltip();
-  // A short delay gives the pointer time to reach the tooltip itself.
+  // A short delay gives the pointer time to reach the tooltip itself. Check
+  // :hover when it fires, rather than relying on enter/leave event order,
+  // since the field name and the tooltip don't touch and a fast pointer can
+  // leave both before the other's mouseenter arrives.
   tooltipHideTimer = setTimeout(() => {
-    if (tooltipEl) tooltipEl.style.display = 'none';
-  }, 150);
+    if (tooltipEl && !tooltipEl.matches(':hover')) tooltipEl.style.display = 'none';
+  }, 200);
 }
 
 function table(rows) {
