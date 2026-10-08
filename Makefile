@@ -2,7 +2,7 @@
 #
 #   make test          run Go tests (vet + fmt check included)
 #   make run-mock      start the Inspector on the mock adapter
-#   make stack-up     start Postgres 17 and the Inspector in containers (builds from source)
+#   make stack-up     start Postgres + Inspector (needs GLASSHOUSE_ALLOWED_ORIGIN=<origin>)
 #   make stack-down   stop the stack and delete its data
 #   make run-postgres start the Inspector on the host instead (stop the stack first: same port)
 #   make demo         before/after snapshot around an insert (needs the stack or run-postgres)
@@ -90,10 +90,10 @@ stack-up:
 	@echo "viewer: http://127.0.0.1:8765/"
 
 stack-down:
-	cd $(PG_DIR) && GLASSHOUSE_INSPECTOR_CONTEXT=../../$(INSPECTOR_DIR) docker compose -f compose.yml down -v
+	cd $(PG_DIR) && GLASSHOUSE_INSPECTOR_CONTEXT=../../$(INSPECTOR_DIR) GLASSHOUSE_ALLOWED_ORIGIN=$${GLASSHOUSE_ALLOWED_ORIGIN:-unused} docker compose -f compose.yml down -v
 
 stack-logs:
-	cd $(PG_DIR) && GLASSHOUSE_INSPECTOR_CONTEXT=../../$(INSPECTOR_DIR) docker compose -f compose.yml logs --tail=50
+	cd $(PG_DIR) && GLASSHOUSE_INSPECTOR_CONTEXT=../../$(INSPECTOR_DIR) GLASSHOUSE_ALLOWED_ORIGIN=$${GLASSHOUSE_ALLOWED_ORIGIN:-unused} docker compose -f compose.yml logs --tail=50
 
 demo:
 	sh $(PG_DIR)/demo.sh

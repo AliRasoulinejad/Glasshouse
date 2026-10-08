@@ -4,8 +4,13 @@
 # it cannot depend on sibling files. The first-start init script is inline.
 #
 # Run it from a URL. The Inspector image is built from source, so the source
-# location must be given too (a git URL, or a local path from a checkout):
-#   curl -fsSL <url>/compose.yml | GLASSHOUSE_INSPECTOR_CONTEXT=<source> docker compose -f - up -d --wait
+# location must be given too (a git URL, or a local path from a checkout).
+# GLASSHOUSE_ALLOWED_ORIGIN is required too: it names the article origin
+# allowed to frame the viewer.
+#   curl -fsSL <url>/compose.yml | \
+#     GLASSHOUSE_INSPECTOR_CONTEXT=<source> \
+#     GLASSHOUSE_ALLOWED_ORIGIN=<article-origin> \
+#     docker compose -f - up -d --wait
 #
 # Both published ports are bound to 127.0.0.1, so they are reachable from this
 # machine only. The Inspector binds 0.0.0.0 inside its own container only; the

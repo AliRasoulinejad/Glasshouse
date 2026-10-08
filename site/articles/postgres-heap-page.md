@@ -48,14 +48,27 @@ the item pointer list grow and the free space shrink.
 
 ## Check it yourself
 
-The panel's button runs the same thing this script does from the command
-line:
+If you have a checkout of the Glasshouse repository, its demo script does
+the same before/after comparison from the command line:
 
 ```sh
 sh adapters/postgres/demo.sh
 ```
 
 It prints the page before and after the insert, the same way the panel
-shows it.
+shows it. This step is optional — the panel above already shows the same
+thing, and a checkout is not required to follow this article.
+
+## When you're done
+
+Stop the lab and remove its data with the same compose file, using the same
+`GLASSHOUSE_ALLOWED_ORIGIN` value you started it with:
+
+```sh
+curl -fsSL <url>/compose.yml | \
+  GLASSHOUSE_INSPECTOR_CONTEXT=<git-url-or-path-to-inspector> \
+  GLASSHOUSE_ALLOWED_ORIGIN=<this-article's-origin> \
+  docker compose -f - down -v
+```
 
 <!-- lab-panel -->

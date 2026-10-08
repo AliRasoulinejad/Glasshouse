@@ -31,9 +31,11 @@ and Redis/Mongo/MinIO. The Website is in progress; see
 - `make test` — gofmt check, vet, tests. Add `USE_DOCKER=1` when Go is not
   installed on the host (this machine has no local Go).
 - `make run-mock` / `make run-postgres` — Inspector on the host. Both use :8765.
-- `make stack-up` / `make stack-down` — Postgres 17 + Inspector in containers.
-  Stop one path before starting the other.
+- `GLASSHOUSE_ALLOWED_ORIGIN=<origin> make stack-up` / `make stack-down` —
+  Postgres 17 + Inspector in containers. The origin is required by `stack-up`
+  (compose has no default). Stop one path before starting the other.
 - `sh adapters/postgres/demo.sh` — before/after snapshot around an insert.
+- `make site-build` — build the static articles into `site/dist`.
 
 ## Security rules (non-negotiable)
 
