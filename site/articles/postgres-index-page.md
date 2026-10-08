@@ -30,8 +30,8 @@ This article shares its lab with the heap-page article — the same compose
 file, the same database, the same Inspector:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/AliRasoulinejad/Glasshouse/v0.1.0/adapters/postgres/compose.yml | \
-  GLASSHOUSE_INSPECTOR_CONTEXT=https://github.com/AliRasoulinejad/Glasshouse.git#v0.1.0:inspector \
+curl -fsSL https://raw.githubusercontent.com/AliRasoulinejad/Glasshouse/v0.2.0/adapters/postgres/compose.yml | \
+  GLASSHOUSE_INSPECTOR_CONTEXT=https://github.com/AliRasoulinejad/Glasshouse.git#v0.2.0:inspector \
   docker compose -f - up -d --build --wait
 ```
 
@@ -62,8 +62,8 @@ Stop the lab and remove its data with the same command, swapping `up` for
 `down -v`:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/AliRasoulinejad/Glasshouse/v0.1.0/adapters/postgres/compose.yml | \
-  GLASSHOUSE_INSPECTOR_CONTEXT=https://github.com/AliRasoulinejad/Glasshouse.git#v0.1.0:inspector \
+curl -fsSL https://raw.githubusercontent.com/AliRasoulinejad/Glasshouse/v0.2.0/adapters/postgres/compose.yml | \
+  GLASSHOUSE_INSPECTOR_CONTEXT=https://github.com/AliRasoulinejad/Glasshouse.git#v0.2.0:inspector \
   docker compose -f - down -v
 ```
 
