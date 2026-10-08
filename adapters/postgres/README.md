@@ -5,10 +5,13 @@ Shows one heap page of a real PostgreSQL 17 table, read through `pageinspect`.
 ## Run it
 
 One command pulls the compose file and starts Postgres and the Inspector. The
-Inspector image is built from source, so the source location must be given:
+Inspector image is built from source, so the source location must be given.
+Pin both to a release tag so the lab doesn't shift under you as `main` moves:
 
 ```sh
-curl -fsSL <url>/compose.yml | GLASSHOUSE_INSPECTOR_CONTEXT=<git-url-or-path-to-inspector> docker compose -f - up -d --build --wait
+curl -fsSL https://raw.githubusercontent.com/AliRasoulinejad/Glasshouse/v0.1.0/adapters/postgres/compose.yml | \
+  GLASSHOUSE_INSPECTOR_CONTEXT=https://github.com/AliRasoulinejad/Glasshouse.git#v0.1.0:inspector \
+  docker compose -f - up -d --build --wait
 ```
 
 `GLASSHOUSE_ALLOWED_ORIGIN` sets which site may frame the viewer. It defaults
