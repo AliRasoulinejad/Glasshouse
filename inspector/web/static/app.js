@@ -4,6 +4,7 @@
 import { viewFor } from './views/registry.js';
 import './views/mock-counter.js';
 import './views/postgres-heap-page.js';
+import './views/postgres-heap-and-index.js';
 
 const HEALTH_INTERVAL_MS = 2000;
 const DOWN_NOTICE_AFTER_MS = 6000;

@@ -52,6 +52,25 @@ docker exec -e PGPASSWORD=glasshouse-local-inspector postgres-postgres-1 \
 # -> ERROR: must be superuser to use raw page functions
 ```
 
+The same pattern covers the index: `glasshouse_btree_metap()` and
+`glasshouse_btree_page_items(blk int)`, both hard-wired to
+`glasshouse_demo_payload_idx`.
+
+## Running the index-page lab instead
+
+The same compose file serves both articles. Set `GLASSHOUSE_ADAPTER` before
+starting it:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/AliRasoulinejad/Glasshouse/v0.1.0/adapters/postgres/compose.yml | \
+  GLASSHOUSE_INSPECTOR_CONTEXT=https://github.com/AliRasoulinejad/Glasshouse.git#v0.1.0:inspector \
+  GLASSHOUSE_ADAPTER=postgres-index \
+  docker compose -f - up -d --build --wait
+```
+
+Only one of the two labs runs on `:8765` at a time — stop one
+(`docker compose ... down -v`) before starting the other.
+
 ## Notes
 
 - The port is published on `127.0.0.1` only.

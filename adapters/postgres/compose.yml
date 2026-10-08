@@ -14,6 +14,12 @@
 # point the lab at a different copy of the article (a local checkout, a
 # fork's Pages site, ...).
 #
+# GLASSHOUSE_ADAPTER selects which article's lab this is: "postgres" (the
+# heap-page article, the default) or "postgres-index" (the index-page
+# article). Both read the same database; the index and its two wrapper
+# functions are created either way, so switching is just restarting the
+# Inspector with a different flag.
+#
 # Both published ports are bound to 127.0.0.1, so they are reachable from this
 # machine only. The Inspector binds 0.0.0.0 inside its own container only; the
 # host side stays on loopback. The passwords are development defaults for a
@@ -73,10 +79,40 @@ configs:
         FROM heap_page_items(get_raw_page('glasshouse_demo', blk)) AS i
       $$f$$;
 
+      CREATE INDEX glasshouse_demo_payload_idx ON glasshouse_demo (payload);
+
+      -- Same privilege boundary as the heap wrappers above: pageinspect's
+      -- raw functions refuse non-superusers, so these are SECURITY DEFINER,
+      -- hard-wired to the one fixed index, taking only a block number.
+      CREATE FUNCTION glasshouse_btree_metap()
+      RETURNS TABLE (root int, level int, fastroot int, fastlevel int)
+      LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog, public
+      AS $$f$$
+        SELECT m.root::int, m.level::int, m.fastroot::int, m.fastlevel::int
+        FROM bt_metap('glasshouse_demo_payload_idx') AS m
+      $$f$$;
+
+      CREATE FUNCTION glasshouse_btree_page_items(blk int)
+      RETURNS TABLE (itemoffset int, ctid text, dead bool, data_hex text)
+      LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog, public
+      AS $$f$$
+        -- i.data is pageinspect's space-separated hex text, not contiguous
+        -- hex. Its first byte is typically a constant 1-byte varlena header
+        -- for a short text value (payload's md5 keys), so skip 1 byte (3
+        -- hex characters: "NN ") before taking a window of real key bytes.
+        SELECT i.itemoffset::int, i.ctid::text, COALESCE(i.dead, false),
+               COALESCE(substring(i.data from 4 for 47), '')
+        FROM bt_page_items('glasshouse_demo_payload_idx', blk) AS i
+      $$f$$;
+
       REVOKE ALL ON FUNCTION glasshouse_page_header(int) FROM PUBLIC;
       REVOKE ALL ON FUNCTION glasshouse_heap_page_items(int) FROM PUBLIC;
+      REVOKE ALL ON FUNCTION glasshouse_btree_metap() FROM PUBLIC;
+      REVOKE ALL ON FUNCTION glasshouse_btree_page_items(int) FROM PUBLIC;
       GRANT EXECUTE ON FUNCTION glasshouse_page_header(int) TO glasshouse_inspector;
       GRANT EXECUTE ON FUNCTION glasshouse_heap_page_items(int) TO glasshouse_inspector;
+      GRANT EXECUTE ON FUNCTION glasshouse_btree_metap() TO glasshouse_inspector;
+      GRANT EXECUTE ON FUNCTION glasshouse_btree_page_items(int) TO glasshouse_inspector;
       SQL
 
 services:
@@ -87,7 +123,7 @@ services:
       - -addr
       - 0.0.0.0:8765
       - -adapter
-      - postgres
+      - ${GLASSHOUSE_ADAPTER:-postgres}
       - -origin
       - ${GLASSHOUSE_ALLOWED_ORIGIN:-https://alirasoulinejad.github.io}
     environment:

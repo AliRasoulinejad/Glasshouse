@@ -304,57 +304,59 @@ function table(rows) {
   return t;
 }
 
+export function renderHeapSection(container, data, focusLP) {
+  const pages = data.pages;
+
+  const wrap = document.createElement('div');
+  wrap.className = 'heap-page';
+
+  const blockLabel = pages.length > 1
+    ? `blocks ${pages[0].block}–${pages[pages.length - 1].block}`
+    : `block ${pages[0].block}`;
+  const totalItems = pages.reduce((n, p) => n + p.items.length, 0);
+  const summary = document.createElement('p');
+  summary.className = 'small';
+  summary.textContent = `${data.relation} · ${blockLabel} · ` +
+    `${totalItems} item pointers`;
+
+  const grid = document.createElement('div');
+  grid.className = 'heap-grid';
+
+  const pagesBox = document.createElement('div');
+  pagesBox.className = 'heap-pages';
+
+  const detail = document.createElement('div');
+  detail.className = 'heap-detail';
+  const detailTitle = document.createElement('h3');
+  detailTitle.textContent = 'Hover a region';
+  detailTitle.style.margin = '0 0 8px';
+  detail.append(detailTitle);
+
+  const onEnter = (d) => {
+    detailTitle.textContent = d.title;
+    detail.replaceChildren(detailTitle, table(d.rows));
+  };
+
+  for (const page of pages) {
+    const mapBox = document.createElement('div');
+    mapBox.className = 'heap-map';
+    const heading = document.createElement('p');
+    heading.className = 'small muted';
+    heading.style.margin = '0 0 4px';
+    heading.textContent = `Block ${page.block} · ${page.items.length} rows · ` +
+      `${page.free_space} bytes free`;
+    mapBox.append(heading, buildMap(page, focusLP, onEnter));
+    pagesBox.append(mapBox);
+  }
+
+  grid.append(pagesBox, detail);
+  wrap.append(summary, grid, legend());
+  container.replaceChildren(wrap);
+}
+
 registerView('postgres.heap_page', {
   title: 'Heap page (byte map)',
   render(container, { snapshot, focus }) {
-    const data = snapshot.data;
-    const pages = data.pages;
-    const focusLP = focus?.detail?.lp ?? null;
-
-    const wrap = document.createElement('div');
-    wrap.className = 'heap-page';
-
-    const blockLabel = pages.length > 1
-      ? `blocks ${pages[0].block}–${pages[pages.length - 1].block}`
-      : `block ${pages[0].block}`;
-    const totalItems = pages.reduce((n, p) => n + p.items.length, 0);
-    const summary = document.createElement('p');
-    summary.className = 'small';
-    summary.textContent = `${data.relation} · ${blockLabel} · ` +
-      `${totalItems} item pointers`;
-
-    const grid = document.createElement('div');
-    grid.className = 'heap-grid';
-
-    const pagesBox = document.createElement('div');
-    pagesBox.className = 'heap-pages';
-
-    const detail = document.createElement('div');
-    detail.className = 'heap-detail';
-    const detailTitle = document.createElement('h3');
-    detailTitle.textContent = 'Hover a region';
-    detailTitle.style.margin = '0 0 8px';
-    detail.append(detailTitle);
-
-    const onEnter = (d) => {
-      detailTitle.textContent = d.title;
-      detail.replaceChildren(detailTitle, table(d.rows));
-    };
-
-    for (const page of pages) {
-      const mapBox = document.createElement('div');
-      mapBox.className = 'heap-map';
-      const heading = document.createElement('p');
-      heading.className = 'small muted';
-      heading.style.margin = '0 0 4px';
-      heading.textContent = `Block ${page.block} · ${page.items.length} rows · ` +
-        `${page.free_space} bytes free`;
-      mapBox.append(heading, buildMap(page, focusLP, onEnter));
-      pagesBox.append(mapBox);
-    }
-
-    grid.append(pagesBox, detail);
-    wrap.append(summary, grid, legend());
-    container.replaceChildren(wrap);
+    renderHeapSection(container, snapshot.data, focus?.detail?.lp ?? null);
   },
 });

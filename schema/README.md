@@ -65,3 +65,23 @@ The handover draft was the starting point. These additions are deliberate:
 
 Each adapter ships a static sample in `samples/` matching this envelope
 exactly, with `schema_version` set. The Website reads these with zero setup.
+
+## Adapter-specific shapes
+
+`snapshot.data`'s shape is fixed per `snapshot.type`, documented as Go types
+next to each adapter — this table is just a map to them:
+
+| Type | Shape | Defined in |
+| --- | --- | --- |
+| `postgres.heap_page` | `{relation, pages: [{block, header, free_space, items}]}` | `inspector/internal/adapter/postgres/heappage.go` |
+| `postgres.heap_and_index` | `{relation, heap: <postgres.heap_page's data>, index: {index_name, pages: [{block, level, type, items}], truncated}}` | `inspector/internal/adapter/postgres/btreepage.go` |
+
+`index.pages[].items[].data_hex` is Postgres's native `bt_page_items` hex
+format: SPACE-SEPARATED byte pairs (e.g. `"78 65 39 32"`), not contiguous
+hex like the heap page's `t_data_hex`. The first byte is typically a
+constant 1-byte varlena header for a short `text` value; the adapter's
+query already skips it before truncating. Item 1 on a page is also
+sometimes not a real index entry at all: it can be a "high key" (a copy of
+the page's upper bound) or, on the leftmost page of a level, a
+"minus infinity" sentinel with empty data — a future UI feature could
+detect and label these using `bt_page_stats`, but nothing does yet.
