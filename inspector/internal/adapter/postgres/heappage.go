@@ -10,6 +10,7 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"sync"
@@ -192,13 +193,28 @@ func readBlock(ctx context.Context, pool *pgxpool.Pool, block int) (Page, error)
 	}
 	defer rows.Close()
 	for rows.Next() {
+		// heap_page_items() returns NULL for every tuple-header column once a
+		// line pointer is LP_DEAD or LP_UNUSED (no tuple there to describe) —
+		// which opportunistic pruning can produce at any time, not only after
+		// an explicit VACUUM. Scan through nullable types and fall back to
+		// zero values; the viewer already skips drawing zero-length items.
 		var it Item
+		var xmin, xmax, ctid, bits, dataHex sql.NullString
+		var infomask2, infomask, hoff sql.NullInt32
 		if err := rows.Scan(&it.LP, &it.Offset, &it.Flags, &it.Length,
-			&it.XMin, &it.XMax, &it.CTID,
-			&it.Infomask2, &it.Infomask, &it.HoffSize,
-			&it.NullBitmap, &it.DataHex); err != nil {
+			&xmin, &xmax, &ctid,
+			&infomask2, &infomask, &hoff,
+			&bits, &dataHex); err != nil {
 			return Page{}, fmt.Errorf("postgres: scan item: %w", err)
 		}
+		it.XMin = orElse(xmin, "0")
+		it.XMax = orElse(xmax, "0")
+		it.CTID = ctid.String
+		it.Infomask2 = int(infomask2.Int32)
+		it.Infomask = int(infomask.Int32)
+		it.HoffSize = int(hoff.Int32)
+		it.NullBitmap = bits.String
+		it.DataHex = dataHex.String
 		page.Items = append(page.Items, it)
 	}
 	if err := rows.Err(); err != nil {
@@ -208,6 +224,14 @@ func readBlock(ctx context.Context, pool *pgxpool.Pool, block int) (Page, error)
 		page.Items = []Item{}
 	}
 	return page, nil
+}
+
+// orElse returns s's value, or def if s is NULL.
+func orElse(s sql.NullString, def string) string {
+	if !s.Valid {
+		return def
+	}
+	return s.String
 }
 
 // readPages pulls the relation's last few blocks, oldest first, so the view
@@ -359,14 +383,29 @@ func (a *Adapter) diff(page Page, now time.Time) []adapter.Event {
 	return out
 }
 
-// rowsOnLastBlock picks the first n tuples (by item pointer order) on the
-// relation's last block, so update_rows and delete_rows act on rows the
-// viewer is actually looking at.
-const rowsOnLastBlock = `
+// rowsOnVisiblePages picks n random tuples from the blocks the viewer is
+// showing (the relation's last maxPages blocks), so update_rows and
+// delete_rows spread their effect across the pages on screen instead of
+// always landing on the last one.
+const rowsOnVisiblePages = `
 	SELECT ctid FROM glasshouse_demo
-	WHERE (ctid::text::point)[0]::int = $1
-	ORDER BY ctid
+	WHERE (ctid::text::point)[0]::int >= $1
+	ORDER BY random()
 	LIMIT $2`
+
+// firstVisibleBlock returns the lowest block number the viewer is currently
+// showing, matching readPages' window.
+func firstVisibleBlock(ctx context.Context, pool *pgxpool.Pool) (int, error) {
+	last, err := lastBlock(ctx, pool)
+	if err != nil {
+		return 0, err
+	}
+	start := last - maxPages + 1
+	if start < 0 {
+		start = 0
+	}
+	return start, nil
+}
 
 // Actions exposes the fixed operations the viewer may trigger. Each one runs
 // a constant statement and takes no input.
@@ -389,21 +428,21 @@ func (a *Adapter) Actions() map[string]adapter.Action {
 			},
 		},
 		"update_rows": {
-			Description: "Overwrite payload on 3 rows of the visible page with a new random hex string (the old row version becomes a dead tuple)",
+			Description: "Overwrite payload on 3 random rows across the visible pages with a new random hex string (the old row version becomes a dead tuple)",
 			Run: func(ctx context.Context) (any, error) {
 				pool, err := a.getPool()
 				if err != nil {
 					return nil, err
 				}
-				blk, err := lastBlock(ctx, pool)
+				start, err := firstVisibleBlock(ctx, pool)
 				if err != nil {
 					return nil, err
 				}
 				tag, err := pool.Exec(ctx,
-					`WITH target AS (`+rowsOnLastBlock+`)
+					`WITH target AS (`+rowsOnVisiblePages+`)
 					 UPDATE glasshouse_demo d SET payload = md5(random()::text)
 					 FROM target t WHERE d.ctid = t.ctid`,
-					blk, 3)
+					start, 3)
 				if err != nil {
 					return nil, err
 				}
@@ -411,20 +450,20 @@ func (a *Adapter) Actions() map[string]adapter.Action {
 			},
 		},
 		"delete_rows": {
-			Description: "Delete 3 rows from the visible page (they become dead tuples until vacuumed)",
+			Description: "Delete 3 random rows across the visible pages (they become dead tuples until vacuumed)",
 			Run: func(ctx context.Context) (any, error) {
 				pool, err := a.getPool()
 				if err != nil {
 					return nil, err
 				}
-				blk, err := lastBlock(ctx, pool)
+				start, err := firstVisibleBlock(ctx, pool)
 				if err != nil {
 					return nil, err
 				}
 				tag, err := pool.Exec(ctx,
-					`WITH target AS (`+rowsOnLastBlock+`)
+					`WITH target AS (`+rowsOnVisiblePages+`)
 					 DELETE FROM glasshouse_demo d USING target t WHERE d.ctid = t.ctid`,
-					blk, 3)
+					start, 3)
 				if err != nil {
 					return nil, err
 				}
