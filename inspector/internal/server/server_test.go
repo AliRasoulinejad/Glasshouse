@@ -344,3 +344,46 @@ func TestFrameAncestorsListsOnlyConfiguredOrigins(t *testing.T) {
 		}
 	}
 }
+
+func TestNewRejectsOriginsThatWouldWidenFraming(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	bad := []string{
+		"https://*",
+		"https://a.example *",
+		"https://a.example; script-src *",
+		"https://a.example/some/path",
+		"https://a.example?q=1",
+		"https://a.example#frag",
+		"https://user@a.example",
+	}
+	for _, o := range bad {
+		_, err := New(Config{
+			Addr:           testAddr,
+			AllowedOrigins: []string{o},
+			Target:         adapter.Target{Name: "mock"},
+			Adapter:        mock.New(time.Hour),
+			Hub:            hub.New(hub.DefaultHistory, logger),
+			Logger:         logger,
+		})
+		if err == nil {
+			t.Errorf("origin %q: want rejected, got accepted", o)
+		}
+	}
+}
+
+func TestNewAcceptsAnOriginWithNoPathOrQuery(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	for _, o := range []string{"https://a.example", "https://a.example:8443", "HTTPS://A.Example"} {
+		_, err := New(Config{
+			Addr:           testAddr,
+			AllowedOrigins: []string{o},
+			Target:         adapter.Target{Name: "mock"},
+			Adapter:        mock.New(time.Hour),
+			Hub:            hub.New(hub.DefaultHistory, logger),
+			Logger:         logger,
+		})
+		if err != nil {
+			t.Errorf("origin %q: want accepted, got %v", o, err)
+		}
+	}
+}

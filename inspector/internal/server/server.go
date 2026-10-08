@@ -16,6 +16,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -98,6 +99,38 @@ func validate(addr string, container bool) error {
 	return fmt.Errorf("addr %q: only 127.0.0.1 or localhost may be bound (use -container inside a container)", addr)
 }
 
+// normalizeOrigin validates one allowed-origin value and returns its
+// canonical form "scheme://host[:port]", with no wildcard, path, query,
+// fragment, or userinfo. The result is used verbatim both as the CORS
+// Access-Control-Allow-Origin value and as a frame-ancestors source in the
+// CSP header, so anything wider than one exact origin here widens both.
+func normalizeOrigin(raw string) (string, error) {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return "", fmt.Errorf("allowed origin %q: %w", raw, err)
+	}
+	scheme := strings.ToLower(u.Scheme)
+	if scheme != "http" && scheme != "https" {
+		return "", fmt.Errorf("allowed origin %q must start with http:// or https://", raw)
+	}
+	if u.Host == "" {
+		return "", fmt.Errorf("allowed origin %q has no host", raw)
+	}
+	if u.User != nil {
+		return "", fmt.Errorf("allowed origin %q must not carry user info", raw)
+	}
+	if u.Path != "" && u.Path != "/" {
+		return "", fmt.Errorf("allowed origin %q must not carry a path; use %s://%s", raw, scheme, u.Host)
+	}
+	if u.RawQuery != "" || u.Fragment != "" {
+		return "", fmt.Errorf("allowed origin %q must not carry a query or fragment", raw)
+	}
+	if strings.ContainsAny(u.Host, "*; ") {
+		return "", fmt.Errorf("allowed origin %q must be a single host, not a wildcard or pattern", raw)
+	}
+	return scheme + "://" + strings.ToLower(u.Host), nil
+}
+
 // New validates the config and builds the handler.
 func New(cfg Config) (*Server, error) {
 	validateFn := ValidateAddr
@@ -124,11 +157,11 @@ func New(cfg Config) (*Server, error) {
 		mux:     http.NewServeMux(),
 	}
 	for _, o := range cfg.AllowedOrigins {
-		o = strings.TrimSuffix(o, "/")
-		if !strings.HasPrefix(o, "http://") && !strings.HasPrefix(o, "https://") {
-			return nil, fmt.Errorf("allowed origin %q must start with http:// or https://", o)
+		normalized, err := normalizeOrigin(o)
+		if err != nil {
+			return nil, err
 		}
-		s.origins[o] = struct{}{}
+		s.origins[normalized] = struct{}{}
 	}
 	if a, ok := cfg.Adapter.(adapter.Actioner); ok {
 		for name, act := range a.Actions() {
