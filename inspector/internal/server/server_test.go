@@ -313,3 +313,34 @@ func waitFor(t *testing.T, cond func() bool) {
 	}
 	t.Fatal("condition not met in time")
 }
+
+func TestFrameAncestorsListsOnlyConfiguredOrigins(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	s, err := New(Config{
+		Addr:           testAddr,
+		AllowedOrigins: []string{testOrigin},
+		Target:         adapter.Target{Name: "mock"},
+		Adapter:        mock.New(time.Hour),
+		Hub:            hub.New(hub.DefaultHistory, logger),
+		Web:            fstest.MapFS{"index.html": {Data: []byte("<!doctype html>")}},
+		Logger:         logger,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, path := range []string{"/", "/health"} {
+		req := httptest.NewRequest(http.MethodGet, "http://"+testAddr+path, nil)
+		rec := httptest.NewRecorder()
+		s.ServeHTTP(rec, req)
+
+		got := rec.Header().Get("Content-Security-Policy")
+		want := "frame-ancestors 'self' " + testOrigin
+		if got != want {
+			t.Errorf("%s: CSP = %q, want %q", path, got, want)
+		}
+		if strings.Contains(got, "evil.example") {
+			t.Errorf("%s: CSP lists an origin that was never configured", path)
+		}
+	}
+}

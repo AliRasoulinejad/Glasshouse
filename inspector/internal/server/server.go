@@ -153,7 +153,19 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "forbidden host", http.StatusForbidden)
 		return
 	}
+	s.setFraming(w)
 	s.mux.ServeHTTP(w, r)
+}
+
+// setFraming lets only this viewer and the configured article origins frame
+// it. Everything else, including clickjacking pages, gets no frame permission.
+func (s *Server) setFraming(w http.ResponseWriter) {
+	sources := []string{"'self'"}
+	for o := range s.origins {
+		sources = append(sources, o)
+	}
+	sort.Strings(sources[1:])
+	w.Header().Set("Content-Security-Policy", "frame-ancestors "+strings.Join(sources, " "))
 }
 
 // Run serves until ctx is cancelled, then shuts down gracefully.
