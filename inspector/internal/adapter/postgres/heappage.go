@@ -1,5 +1,5 @@
-// Package postgres is the storage adapter for PostgreSQL. It reads one heap
-// page of a demo table through pageinspect and emits it as a
+// Package postgres is the storage adapter for PostgreSQL. It reads the last
+// few heap pages of a demo table through pageinspect and emits them as a
 // "postgres.heap_page" snapshot, plus events when tuples appear or get
 // deleted.
 //
@@ -56,18 +56,29 @@ type Item struct {
 	DataHex    string `json:"t_data_hex"`
 }
 
-// HeapPage is the snapshot payload.
-type HeapPage struct {
-	Relation string `json:"relation"`
-	Block    int    `json:"block"`
-	Header   Header `json:"header"`
+// Page is one block of the relation.
+type Page struct {
+	Block  int    `json:"block"`
+	Header Header `json:"header"`
 	// FreeSpace is the gap between the item pointer array and the tuple area.
 	FreeSpace int    `json:"free_space"`
 	Items     []Item `json:"items"`
 }
 
-// Adapter inspects Relation's last block — the one most recently written —
-// so the view keeps up as the demo table grows past its first page.
+// maxPages caps how many blocks are read and shown side by side, so the
+// panel stays cheap to draw even once the demo table has many pages.
+const maxPages = 3
+
+// HeapPages is the snapshot payload: the relation's last few blocks, oldest
+// first, so the reader can see rows spill from one page into the next.
+type HeapPages struct {
+	Relation string `json:"relation"`
+	Pages    []Page `json:"pages"`
+}
+
+// Adapter inspects Relation's last few blocks — up to maxPages, ending at the
+// one most recently written — so the view keeps up as the demo table grows
+// past its first page.
 type Adapter struct {
 	// Interval is how often the event stream re-reads the page.
 	Interval time.Duration
@@ -153,30 +164,19 @@ func lastBlock(ctx context.Context, pool *pgxpool.Pool) (int, error) {
 	return blocks, nil
 }
 
-// readPage pulls the current header and item pointers of the relation's last
-// block, so the view keeps up as the demo table grows past its first page.
-func (a *Adapter) readPage(ctx context.Context) (HeapPage, error) {
-	pool, err := a.getPool()
-	if err != nil {
-		return HeapPage{}, err
-	}
+// readBlock pulls the current header and item pointers of one block.
+func readBlock(ctx context.Context, pool *pgxpool.Pool, block int) (Page, error) {
+	page := Page{Block: block}
 
-	blocks, err := lastBlock(ctx, pool)
-	if err != nil {
-		return HeapPage{}, err
-	}
-
-	page := HeapPage{Relation: Relation, Block: blocks}
-
-	err = pool.QueryRow(ctx,
+	err := pool.QueryRow(ctx,
 		`SELECT lsn, checksum, flags, lower, upper, special, pagesize, version, prune_xid
 		 FROM glasshouse_page_header($1::int4)`,
-		blocks,
+		block,
 	).Scan(&page.Header.LSN, &page.Header.Checksum, &page.Header.Flags,
 		&page.Header.Lower, &page.Header.Upper, &page.Header.Special,
 		&page.Header.PageSize, &page.Header.Version, &page.Header.PruneXID)
 	if err != nil {
-		return HeapPage{}, fmt.Errorf("postgres: page_header: %w", err)
+		return Page{}, fmt.Errorf("postgres: page_header: %w", err)
 	}
 	page.FreeSpace = page.Header.Upper - page.Header.Lower
 
@@ -185,10 +185,10 @@ func (a *Adapter) readPage(ctx context.Context) (HeapPage, error) {
 		        t_infomask2, t_infomask, t_hoff, t_bits, t_data_hex
 		 FROM glasshouse_heap_page_items($1::int4)
 		 ORDER BY lp`,
-		blocks,
+		block,
 	)
 	if err != nil {
-		return HeapPage{}, fmt.Errorf("postgres: heap_page_items: %w", err)
+		return Page{}, fmt.Errorf("postgres: heap_page_items: %w", err)
 	}
 	defer rows.Close()
 	for rows.Next() {
@@ -197,12 +197,12 @@ func (a *Adapter) readPage(ctx context.Context) (HeapPage, error) {
 			&it.XMin, &it.XMax, &it.CTID,
 			&it.Infomask2, &it.Infomask, &it.HoffSize,
 			&it.NullBitmap, &it.DataHex); err != nil {
-			return HeapPage{}, fmt.Errorf("postgres: scan item: %w", err)
+			return Page{}, fmt.Errorf("postgres: scan item: %w", err)
 		}
 		page.Items = append(page.Items, it)
 	}
 	if err := rows.Err(); err != nil {
-		return HeapPage{}, fmt.Errorf("postgres: items: %w", err)
+		return Page{}, fmt.Errorf("postgres: items: %w", err)
 	}
 	if page.Items == nil {
 		page.Items = []Item{}
@@ -210,9 +210,37 @@ func (a *Adapter) readPage(ctx context.Context) (HeapPage, error) {
 	return page, nil
 }
 
-// Snapshot returns the current heap page.
+// readPages pulls the relation's last few blocks, oldest first, so the view
+// can show rows spilling from one page into the next.
+func (a *Adapter) readPages(ctx context.Context) (HeapPages, error) {
+	pool, err := a.getPool()
+	if err != nil {
+		return HeapPages{}, err
+	}
+
+	last, err := lastBlock(ctx, pool)
+	if err != nil {
+		return HeapPages{}, err
+	}
+	start := last - maxPages + 1
+	if start < 0 {
+		start = 0
+	}
+
+	pages := make([]Page, 0, last-start+1)
+	for b := start; b <= last; b++ {
+		page, err := readBlock(ctx, pool, b)
+		if err != nil {
+			return HeapPages{}, err
+		}
+		pages = append(pages, page)
+	}
+	return HeapPages{Relation: Relation, Pages: pages}, nil
+}
+
+// Snapshot returns the current heap pages.
 func (a *Adapter) Snapshot(ctx context.Context) (adapter.Snapshot, error) {
-	page, err := a.readPage(ctx)
+	pages, err := a.readPages(ctx)
 	if err != nil {
 		return adapter.Snapshot{}, err
 	}
@@ -225,7 +253,7 @@ func (a *Adapter) Snapshot(ctx context.Context) (adapter.Snapshot, error) {
 		Source:    source,
 		Seq:       seq,
 		Timestamp: time.Now().UTC(),
-		Data:      page,
+		Data:      pages,
 	}, nil
 }
 
@@ -248,14 +276,15 @@ func (a *Adapter) StreamEvents(ctx context.Context) (<-chan adapter.Event, <-cha
 			case <-ctx.Done():
 				return
 			case now := <-ticker.C:
-				page, err := a.readPage(ctx)
+				pages, err := a.readPages(ctx)
 				if err != nil {
 					if ctx.Err() == nil {
 						errs <- err
 					}
 					return
 				}
-				for _, ev := range a.diff(page, now.UTC()) {
+				last := pages.Pages[len(pages.Pages)-1]
+				for _, ev := range a.diff(last, now.UTC()) {
 					select {
 					case events <- ev:
 					case <-ctx.Done():
@@ -268,10 +297,10 @@ func (a *Adapter) StreamEvents(ctx context.Context) (<-chan adapter.Event, <-cha
 	return events, errs, nil
 }
 
-// diff compares the page with the previous read and returns events for new
-// tuples, for tuples whose xmax was set (a delete or update), and for tuples
-// that vanished from the same block (a vacuum reclaiming a dead tuple).
-func (a *Adapter) diff(page HeapPage, now time.Time) []adapter.Event {
+// diff compares the last block with the previous read and returns events for
+// new tuples, for tuples whose xmax was set (a delete or update), and for
+// tuples that vanished from the same block (a vacuum reclaiming a dead tuple).
+func (a *Adapter) diff(page Page, now time.Time) []adapter.Event {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 

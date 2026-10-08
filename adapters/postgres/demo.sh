@@ -13,9 +13,9 @@ HDR='X-Glasshouse-Action: 1'
 PY_SUMMARY="
 import json, sys
 env = json.load(sys.stdin)
-p = env[\"snapshot\"][\"data\"]
+p = env[\"snapshot\"][\"data\"][\"pages\"][-1]
 h = p[\"header\"]
-print(f\"  items={len(p['items'])}  lower={h['lower']}  upper={h['upper']}  free={p['free_space']} bytes  lsn={h['lsn']}\")
+print(f\"  block={p['block']}  items={len(p['items'])}  lower={h['lower']}  upper={h['upper']}  free={p['free_space']} bytes  lsn={h['lsn']}\")
 "
 
 summarize() {

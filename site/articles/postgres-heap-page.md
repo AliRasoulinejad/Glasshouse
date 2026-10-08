@@ -33,8 +33,9 @@ without it, the panel cannot reach the Inspector at all.
 
 ## Read the page
 
-The panel shows a byte map of one page of the demo table. Hover a region to
-see its fields on the right.
+The panel shows a byte map for each of the demo table's last few pages, side
+by side, oldest to newest. Hover a region on any of them to see its fields on
+the right.
 
 - **Item pointers** are small, fixed-size entries just after the header.
   Each one names a tuple by `lp` (its number) and points at it with
@@ -52,9 +53,9 @@ Press **insert_rows** in the panel. It inserts 10 rows into the demo table
 through a fixed, constant statement, nothing the browser can change. Watch
 the item pointer list grow and the free space shrink.
 
-Insert enough times and the page you are watching fills up — Postgres starts
-a new one, and the panel follows it there, always showing the table's last
-page.
+Insert enough times and the last page fills up — Postgres starts a new one,
+and it appears alongside the others, so you can see rows spilling from one
+page into the next.
 
 ## Dead tuples
 

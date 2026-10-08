@@ -89,6 +89,10 @@ and Redis/Mongo/MinIO. The Website is in progress; see
 - The adapter always reads the relation's *last* block (`lastBlock` in
   `heappage.go`), not a fixed one, so the view keeps following the demo table
   as `insert_rows` pushes it past its first page.
+- The snapshot's `data.pages` is an array of up to `maxPages` blocks (oldest
+  first), ending at the last block, so the viewer can show pages side by
+  side. Only the last block is diffed for events (`diff` in `heappage.go`);
+  older pages are read-only context.
 
 ## Conventions
 

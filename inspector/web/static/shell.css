@@ -156,10 +156,11 @@ button:focus-visible, select:focus-visible { outline: 2px solid var(--accent); o
 @media (max-width: 700px) {
   .heap-grid { grid-template-columns: 1fr; }
 }
+.heap-pages { display: flex; gap: 14px; flex-wrap: wrap; min-width: 0; }
 .heap-map svg rect { transition: opacity .1s; }
 .heap-map svg .region:hover rect { opacity: .8; }
 .heap-map svg rect:focus { outline: 2px solid var(--accent); }
-.heap-map { display: grid; gap: 10px; }
+.heap-map { display: grid; gap: 4px; flex: 1 1 220px; min-width: 160px; max-width: 320px; }
 .heap-detail { min-width: 0; }
 .heap-detail h3 { font-size: 14px; }
 

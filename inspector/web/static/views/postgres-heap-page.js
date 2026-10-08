@@ -84,7 +84,6 @@ function buildMap(page, focusLP, onEnter) {
   svg.setAttribute('aria-label', `Byte map of heap page ${page.block}`);
   svg.setAttribute('class', 'bytemap');
   svg.style.width = '100%';
-  svg.style.maxWidth = `${BYTES_PER_ROW * CELL_W * 2}px`;
   svg.style.height = 'auto';
 
   // Background, so the free region reads as empty rather than missing.
@@ -185,22 +184,28 @@ function table(rows) {
 registerView('postgres.heap_page', {
   title: 'Heap page (byte map)',
   render(container, { snapshot, focus }) {
-    const page = snapshot.data;
+    const data = snapshot.data;
+    const pages = data.pages;
     const focusLP = focus?.detail?.lp ?? null;
 
     const wrap = document.createElement('div');
     wrap.className = 'heap-page';
 
+    const blockLabel = pages.length > 1
+      ? `blocks ${pages[0].block}–${pages[pages.length - 1].block}`
+      : `block ${pages[0].block}`;
+    const totalItems = pages.reduce((n, p) => n + p.items.length, 0);
     const summary = document.createElement('p');
     summary.className = 'small';
-    summary.textContent = `${page.relation} · block ${page.block} · ` +
-      `${page.items.length} item pointers · ${page.free_space} bytes free`;
+    summary.textContent = `${data.relation} · ${blockLabel} · ` +
+      `${totalItems} item pointers`;
 
     const grid = document.createElement('div');
     grid.className = 'heap-grid';
 
-    const mapBox = document.createElement('div');
-    mapBox.className = 'heap-map';
+    const pagesBox = document.createElement('div');
+    pagesBox.className = 'heap-pages';
+
     const detail = document.createElement('div');
     detail.className = 'heap-detail';
     const detailTitle = document.createElement('h3');
@@ -213,9 +218,20 @@ registerView('postgres.heap_page', {
       detail.replaceChildren(detailTitle, table(d.rows));
     };
 
-    mapBox.append(buildMap(page, focusLP, onEnter), legend());
-    grid.append(mapBox, detail);
-    wrap.append(summary, grid);
+    for (const page of pages) {
+      const mapBox = document.createElement('div');
+      mapBox.className = 'heap-map';
+      const heading = document.createElement('p');
+      heading.className = 'small muted';
+      heading.style.margin = '0 0 4px';
+      heading.textContent = `Block ${page.block} · ${page.items.length} rows · ` +
+        `${page.free_space} bytes free`;
+      mapBox.append(heading, buildMap(page, focusLP, onEnter));
+      pagesBox.append(mapBox);
+    }
+
+    grid.append(pagesBox, detail);
+    wrap.append(summary, grid, legend());
     container.replaceChildren(wrap);
   },
 });
