@@ -25,18 +25,20 @@ GO_IMAGE   ?= golang:1.24-alpine
 
 ifeq ($(USE_DOCKER),1)
   # Run the Go toolchain in a container, mounting the repo so output lands here.
-  GO      = docker run --rm -u $$(id -u):$$(id -g) -e HOME=/tmp -e GOPATH=/tmp/gopath -e GOCACHE=/tmp/gocache -e CGO_ENABLED=0 -v $(CURDIR)/$(INSPECTOR_DIR):/src -w /src $(GO_IMAGE) go
-  GOFMT   = docker run --rm -u $$(id -u):$$(id -g) -e HOME=/tmp -v $(CURDIR)/$(INSPECTOR_DIR):/src -w /src $(GO_IMAGE) gofmt
-  # Mounts site/ instead of inspector/: the site module is a separate Go
+  GO        = docker run --rm -u $$(id -u):$$(id -g) -e HOME=/tmp -e GOPATH=/tmp/gopath -e GOCACHE=/tmp/gocache -e CGO_ENABLED=0 -v $(CURDIR)/$(INSPECTOR_DIR):/src -w /src $(GO_IMAGE) go
+  GOFMT     = docker run --rm -u $$(id -u):$$(id -g) -e HOME=/tmp -v $(CURDIR)/$(INSPECTOR_DIR):/src -w /src $(GO_IMAGE) gofmt
+  # Mount site/ instead of inspector/: the site module is a separate Go
   # module, so it needs its own container mount.
-  GO_SITE = docker run --rm -u $$(id -u):$$(id -g) -e HOME=/tmp -e GOPATH=/tmp/gopath -e GOCACHE=/tmp/gocache -e CGO_ENABLED=0 -v $(CURDIR)/$(SITE_DIR):/src -w /src $(GO_IMAGE) go
+  GO_SITE   = docker run --rm -u $$(id -u):$$(id -g) -e HOME=/tmp -e GOPATH=/tmp/gopath -e GOCACHE=/tmp/gocache -e CGO_ENABLED=0 -v $(CURDIR)/$(SITE_DIR):/src -w /src $(GO_IMAGE) go
+  GOFMT_SITE = docker run --rm -u $$(id -u):$$(id -g) -e HOME=/tmp -v $(CURDIR)/$(SITE_DIR):/src -w /src $(GO_IMAGE) gofmt
 else
-  GO      = go
-  GOFMT   = gofmt
-  GO_SITE = go
+  GO        = go
+  GOFMT     = gofmt
+  GO_SITE   = go
+  GOFMT_SITE = gofmt
 endif
 
-.PHONY: help test vet fmt-check fmt build run-mock run-postgres stack-up stack-down stack-logs demo site-actions site-build clean
+.PHONY: help test vet fmt-check fmt build run-mock run-postgres stack-up stack-down stack-logs demo site-actions site-build site-fmt-check site-vet clean
 
 help:
 	@grep -E '^#   make ' Makefile | sed 's/^#   //'
@@ -49,12 +51,23 @@ fmt-check:
 
 fmt:
 	cd $(INSPECTOR_DIR) && $(GOFMT) -w .
+	cd $(SITE_DIR) && $(GOFMT_SITE) -w .
 
 vet:
 	cd $(INSPECTOR_DIR) && $(GO) vet ./...
 
-test: fmt-check vet
+# The site module holds the HTML-sanitization guarantee (article.Build), so
+# it gets the same fmt/vet/test gate as the Inspector, not an ad-hoc check.
+site-fmt-check:
+	@out=$$(cd $(SITE_DIR) && $(GOFMT_SITE) -l .); \
+	 if [ -n "$$out" ]; then echo "gofmt needed in site/ (run make fmt):"; echo "$$out"; exit 1; fi
+
+site-vet:
+	cd $(SITE_DIR) && $(GO_SITE) vet ./...
+
+test: fmt-check vet site-fmt-check site-vet
 	cd $(INSPECTOR_DIR) && $(GO) test -count=1 ./...
+	cd $(SITE_DIR) && $(GO_SITE) test -count=1 ./...
 
 build:
 	mkdir -p $(BIN_DIR)
