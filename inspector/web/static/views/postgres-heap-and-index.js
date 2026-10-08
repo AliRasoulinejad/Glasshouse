@@ -128,15 +128,24 @@ registerView('postgres.heap_and_index', {
     const wrap = document.createElement('div');
     wrap.className = 'heap-and-index';
 
+    const heapCol = document.createElement('div');
+    heapCol.className = 'heap-and-index-col';
+    const heapHeading = document.createElement('h3');
+    heapHeading.style.margin = '0 0 8px';
+    heapHeading.textContent = 'Heap page';
     const heapSection = document.createElement('div');
     renderHeapSection(heapSection, data.heap, focus?.detail?.lp ?? null);
+    heapCol.append(heapHeading, heapSection);
 
+    const indexCol = document.createElement('div');
+    indexCol.className = 'heap-and-index-col';
     const indexHeading = document.createElement('h3');
-    indexHeading.style.margin = '20px 0 8px';
+    indexHeading.style.margin = '0 0 8px';
     indexHeading.textContent = `Index: ${data.index.index_name}`;
-
     const treeWrap = treeDiagram(data.index);
-    wrap.append(heapSection, indexHeading, treeWrap.element);
+    indexCol.append(indexHeading, treeWrap.element);
+
+    wrap.append(heapCol, indexCol);
     container.replaceChildren(wrap);
     drawConnectors(treeWrap);
   },

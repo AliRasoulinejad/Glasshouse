@@ -164,7 +164,16 @@ button:focus-visible, select:focus-visible { outline: 2px solid var(--accent); o
 .heap-detail { min-width: 0; }
 .heap-detail h3 { font-size: 14px; }
 
-.heap-and-index { display: grid; gap: 4px; }
+.heap-and-index {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .heap-and-index { grid-template-columns: 1fr; }
+}
+.heap-and-index-col { min-width: 0; }
 .index-tree { position: relative; display: grid; gap: 14px; margin-top: 8px; }
 .index-level { display: flex; gap: 10px; flex-wrap: wrap; position: relative; z-index: 1; }
 .index-page {
