@@ -262,9 +262,27 @@ func (a *Adapter) readPages(ctx context.Context) (HeapPages, error) {
 	return HeapPages{Relation: Relation, Pages: pages}, nil
 }
 
-// Snapshot returns the current heap pages.
+// heapSnapshot is the data payload for postgres.heap_page: HeapPages'
+// fields (relation, pages) plus a sibling queries list. It is not a field
+// on HeapPages itself because WithIndexAdapter.Snapshot (btreepage.go)
+// reuses Adapter.readPages for its own "heap" field and must not carry a
+// duplicate or stale queries list there.
+type heapSnapshot struct {
+	HeapPages
+	Queries []RunningQuery `json:"queries"`
+}
+
+// Snapshot returns the current heap pages and the database's active queries.
 func (a *Adapter) Snapshot(ctx context.Context) (adapter.Snapshot, error) {
 	pages, err := a.readPages(ctx)
+	if err != nil {
+		return adapter.Snapshot{}, err
+	}
+	pool, err := a.getPool()
+	if err != nil {
+		return adapter.Snapshot{}, err
+	}
+	queries, err := readRunningQueries(ctx, pool)
 	if err != nil {
 		return adapter.Snapshot{}, err
 	}
@@ -277,7 +295,7 @@ func (a *Adapter) Snapshot(ctx context.Context) (adapter.Snapshot, error) {
 		Source:    source,
 		Seq:       seq,
 		Timestamp: time.Now().UTC(),
-		Data:      pages,
+		Data:      heapSnapshot{HeapPages: pages, Queries: queries},
 	}, nil
 }
 
