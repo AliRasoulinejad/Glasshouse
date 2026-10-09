@@ -9,8 +9,8 @@ Inspector image is built from source, so the source location must be given.
 Pin both to a release tag so the lab doesn't shift under you as `main` moves:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/AliRasoulinejad/Glasshouse/v0.3.0/adapters/postgres/compose.yml | \
-  GLASSHOUSE_INSPECTOR_CONTEXT=https://github.com/AliRasoulinejad/Glasshouse.git#v0.3.0:inspector \
+curl -fsSL https://raw.githubusercontent.com/AliRasoulinejad/Glasshouse/v0.4.0/adapters/postgres/compose.yml | \
+  GLASSHOUSE_INSPECTOR_CONTEXT=https://github.com/AliRasoulinejad/Glasshouse.git#v0.4.0:inspector \
   docker compose -f - up -d --build --wait
 ```
 
