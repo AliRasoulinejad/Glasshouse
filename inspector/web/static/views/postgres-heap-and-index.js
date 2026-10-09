@@ -1,5 +1,6 @@
 import { registerView } from './registry.js';
 import { renderHeapSection } from './postgres-heap-page.js';
+import { renderRunningQueries } from './running-queries.js';
 
 function keyChip(item) {
   const chip = document.createElement('span');
@@ -137,6 +138,7 @@ registerView('postgres.heap_and_index', {
 
     const treeWrap = treeDiagram(data.index);
     wrap.append(heapSection, indexHeading, treeWrap.element);
+    renderRunningQueries(wrap, data.queries);
     container.replaceChildren(wrap);
     drawConnectors(treeWrap);
   },

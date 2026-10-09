@@ -203,6 +203,16 @@ table.kv th, table.kv td {
 }
 table.kv th { color: var(--muted); font-weight: 500; width: 40%; }
 
+table.queries { border-collapse: collapse; width: 100%; font: 12px/1.5 var(--mono); }
+table.queries th, table.queries td {
+  text-align: left;
+  padding: 3px 8px 3px 0;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+  word-break: break-word;
+}
+table.queries th { color: var(--muted); font-weight: 500; }
+
 .detail {
   margin: 0;
   font: 12px/1.45 var(--mono);

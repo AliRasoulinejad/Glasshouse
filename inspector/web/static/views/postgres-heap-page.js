@@ -1,4 +1,5 @@
 import { registerView } from './registry.js';
+import { renderRunningQueries } from './running-queries.js';
 
 // Byte map of one PostgreSQL heap page (8 KiB), drawn from the real
 // pageinspect output. The page is laid out in rows of BYTES_PER_ROW bytes,
@@ -351,6 +352,11 @@ export function renderHeapSection(container, data, focusLP) {
 
   grid.append(pagesBox, detail);
   wrap.append(summary, grid, legend());
+  // data.queries is absent when renderHeapSection is called on the embedded
+  // heap section inside postgres.heap_and_index (data.heap carries no
+  // queries list of its own); that view renders the running-queries table
+  // itself, once, from the top-level snapshot data instead.
+  if (data.queries) renderRunningQueries(wrap, data.queries);
   container.replaceChildren(wrap);
 }
 
