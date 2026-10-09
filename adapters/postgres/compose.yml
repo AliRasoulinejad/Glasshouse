@@ -35,6 +35,7 @@ configs:
       psql -v ON_ERROR_STOP=1 --username "$$POSTGRES_USER" --dbname "$$POSTGRES_DB" \
         -v inspector_pw="$$GLASSHOUSE_INSPECTOR_PASSWORD" <<'SQL'
       CREATE EXTENSION IF NOT EXISTS pageinspect;
+      CREATE EXTENSION IF NOT EXISTS pg_walinspect;
 
       CREATE TABLE glasshouse_demo (id int, payload text);
       INSERT INTO glasshouse_demo (id, payload)
@@ -123,6 +124,10 @@ configs:
       GRANT EXECUTE ON FUNCTION glasshouse_btree_metap() TO glasshouse_inspector;
       GRANT EXECUTE ON FUNCTION glasshouse_btree_page_items(int) TO glasshouse_inspector;
       GRANT EXECUTE ON FUNCTION glasshouse_heap_values(text[]) TO glasshouse_inspector;
+      -- pg_walinspect's functions are superuser-only by default; this is the
+      -- one function the adapter calls, granted directly (least privilege,
+      -- narrower than membership in pg_monitor).
+      GRANT EXECUTE ON FUNCTION pg_get_wal_records_info(pg_lsn, pg_lsn) TO glasshouse_inspector;
       SQL
 
 services:

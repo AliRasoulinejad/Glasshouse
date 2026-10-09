@@ -357,9 +357,38 @@ export function renderHeapSection(container, data, focusLP) {
   container.replaceChildren(wrap);
 }
 
+// Returns the wal_record events in `events` that share focus's
+// correlation_id, oldest first. Returns [] if focus has no correlation_id
+// or no visible wal_record event matches it (e.g. its WAL record touched a
+// block outside the window currently shown).
+function correlatedWALRecords(events, focus) {
+  if (!focus?.correlation_id) return [];
+  return events.filter((ev) => ev.kind === 'wal_record' && ev.correlation_id === focus.correlation_id);
+}
+
+function walRecordsSection(records) {
+  const section = document.createElement('div');
+  section.className = 'wal-records';
+  const heading = document.createElement('h4');
+  heading.textContent = records.length === 1 ? 'Produced by this WAL record' : 'Produced by these WAL records';
+  section.append(heading);
+  for (const rec of records) {
+    const d = rec.detail;
+    section.append(table(fieldRows({
+      lsn: d.lsn, rmgr: d.rmgr, record_type: d.record_type,
+      block: d.block, length: d.length, description: d.description,
+    })));
+  }
+  return section;
+}
+
 registerView('postgres.heap_page', {
   title: 'Heap page (byte map)',
-  render(container, { snapshot, focus }) {
+  render(container, { snapshot, events, focus }) {
     renderHeapSection(container, snapshot.data, focus?.detail?.lp ?? null);
+    const walRecords = correlatedWALRecords(events, focus);
+    if (walRecords.length > 0) {
+      container.querySelector('.heap-page')?.append(walRecordsSection(walRecords));
+    }
   },
 });

@@ -101,6 +101,11 @@ progress; see `docs/superpowers/specs/2026-10-04-website-design.md`.
   substrings `data` directly.
 - `VACUUM (FULL)` needs the PG17 `MAINTAIN` privilege (granted to
   `glasshouse_inspector` in `compose.yml`), not superuser.
+- `VACUUM (FULL)` rewrites the table onto a new relfilenode, so the WAL
+  overlay's relation-to-WAL-record matching (`readWALRecords` in
+  `heappage.go`) re-resolves `pg_relation_filenode('glasshouse_demo')` on
+  every poll tick instead of caching it — a cached value would silently stop
+  matching any WAL record after the first `vacuum_full` action.
 - The adapter always reads the relation's *last* block (`lastBlock` in
   `heappage.go`), not a fixed one, so the view keeps following the demo table
   as `insert_rows` pushes it past its first page.
