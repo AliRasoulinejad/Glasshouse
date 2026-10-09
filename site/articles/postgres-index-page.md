@@ -17,12 +17,17 @@ fill in or split; `payload` gets a random value on every row, so the tree
 actually grows as you insert.
 
 Each box below is one index page: its block number, whether it's the root,
-an internal page, or a leaf, and its level (0 is the leaf level). The chips
-inside are key prefixes — hover one for its position and, for a real index
-entry, the heap tuple (or child page) it points to. The first chip on a page
-is sometimes not a real entry at all: it can be a copy of the page's upper
-bound (a "high key") or, on the leftmost page of a level, an empty
-"minus infinity" sentinel — neither one points anywhere.
+an internal page, or a leaf, and its level (0 is the leaf level). On a leaf
+page, each chip shows the real, decoded `payload` value that entry points
+to, read live from the table by its heap tuple pointer — the actual key the
+tree is sorted on, not a stand-in for it. On an internal or root page, a
+chip's `ctid` is a downlink to a child block rather than a heap pointer, so
+there is nothing to decode there; it shows the raw key bytes instead. Hover
+any chip for its position and, for a leaf entry whose row still exists, both
+forms together. The first chip on a page is sometimes not a real entry at
+all: it can be a copy of the page's upper bound (a "high key") or, on the
+leftmost page of a level, an empty "minus infinity" sentinel — neither one
+points anywhere.
 
 ## Start the lab
 

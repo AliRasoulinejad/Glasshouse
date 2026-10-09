@@ -23,6 +23,13 @@ type IndexItem struct {
 	CTID       string `json:"ctid"`
 	DataHex    string `json:"data_hex"`
 	Dead       bool   `json:"dead"`
+	// Value is the real, decoded payload this entry points to, read by
+	// joining the live table on CTID. It is set only on leaf pages, where
+	// CTID is a real heap tuple pointer (on an internal or root page it is
+	// a downlink, not a heap pointer, so it is left nil there). It is also
+	// nil on a leaf whose pointed-to tuple no longer exists (dead entry not
+	// yet vacuumed).
+	Value *string `json:"value"`
 }
 
 // IndexPage is one block of the index, with its level (0 = leaf) and its
@@ -197,7 +204,40 @@ func readIndexPages(ctx context.Context, pool *pgxpool.Pool) (IndexPages, error)
 		return items, nil
 	}
 
-	return walkIndex(ctx, IndexName, readMeta, readPage)
+	pages, err := walkIndex(ctx, IndexName, readMeta, readPage)
+	if err != nil {
+		return IndexPages{}, err
+	}
+
+	// Decode real values only for leaf items: a leaf's ctid is a real heap
+	// pointer, but an internal/root page's ctid is a downlink encoding a
+	// child block, not a heap location, so looking it up would risk
+	// matching an unrelated live row at that same (block, offset).
+	var ctids []string
+	for _, page := range pages.Pages {
+		if page.Level != 0 {
+			continue
+		}
+		for _, it := range page.Items {
+			ctids = append(ctids, it.CTID)
+		}
+	}
+	values, err := heapValues(ctx, pool, ctids)
+	if err != nil {
+		return IndexPages{}, err
+	}
+	for pi, page := range pages.Pages {
+		if page.Level != 0 {
+			continue
+		}
+		for ii, it := range page.Items {
+			if v, ok := values[it.CTID]; ok {
+				pages.Pages[pi].Items[ii].Value = &v.Payload
+			}
+		}
+	}
+
+	return pages, nil
 }
 
 // WithIndexAdapter reads the demo table's heap pages and its payload

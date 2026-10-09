@@ -126,6 +126,7 @@ function buildMap(page, focusLP, onEnter) {
       t_infomask: it.t_infomask, t_infomask2: it.t_infomask2,
       t_hoff: it.t_hoff, t_bits: it.t_bits || '(none)',
       t_data_hex: it.t_data_hex || '(none)',
+      id: it.id ?? '(none)', payload: it.payload ?? '(none)',
     })), onEnter);
   });
 
@@ -196,6 +197,8 @@ const FIELD_INFO = {
   t_hoff: 'The t_hoff value is the length of the tuple header in bytes. Column data starts after it.',
   t_bits: 'The t_bits value marks which columns are null. (none) means no column is null.',
   t_data_hex: 'The t_data_hex value shows the raw column data in hex format.',
+  id: 'The id value is the real, decoded value of the id column, read from the live table. (none) means this row no longer exists there (a dead tuple).',
+  payload: 'The payload value is the real, decoded value of the payload column, read from the live table. (none) means this row no longer exists there (a dead tuple).',
 };
 
 const GLOSSARY_URL = 'glossary.html';

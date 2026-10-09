@@ -73,6 +73,20 @@ configs:
         FROM heap_page_items(get_raw_page('glasshouse_demo', blk)) AS i
       $$f$$;
 
+      -- Looks up the live, decoded column values for a batch of tuple
+      -- locations by their ctid, so the viewer can show the real payload
+      -- next to the raw hex instead of only the hex. An inner join: a ctid
+      -- with no current row (a dead tuple, or an internal-page "ctid" that
+      -- is really a downlink, not a heap pointer) simply has no row back.
+      CREATE FUNCTION glasshouse_heap_values(ctids text[])
+      RETURNS TABLE (ctid text, id int, payload text)
+      LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog, public
+      AS $$f$$
+        SELECT w.wanted_ctid, d.id, d.payload
+        FROM unnest(ctids) AS w(wanted_ctid)
+        JOIN glasshouse_demo d ON d.ctid = w.wanted_ctid::tid
+      $$f$$;
+
       CREATE INDEX glasshouse_demo_payload_idx ON glasshouse_demo (payload);
 
       -- Same privilege boundary as the heap wrappers above: pageinspect's
@@ -103,10 +117,12 @@ configs:
       REVOKE ALL ON FUNCTION glasshouse_heap_page_items(int) FROM PUBLIC;
       REVOKE ALL ON FUNCTION glasshouse_btree_metap() FROM PUBLIC;
       REVOKE ALL ON FUNCTION glasshouse_btree_page_items(int) FROM PUBLIC;
+      REVOKE ALL ON FUNCTION glasshouse_heap_values(text[]) FROM PUBLIC;
       GRANT EXECUTE ON FUNCTION glasshouse_page_header(int) TO glasshouse_inspector;
       GRANT EXECUTE ON FUNCTION glasshouse_heap_page_items(int) TO glasshouse_inspector;
       GRANT EXECUTE ON FUNCTION glasshouse_btree_metap() TO glasshouse_inspector;
       GRANT EXECUTE ON FUNCTION glasshouse_btree_page_items(int) TO glasshouse_inspector;
+      GRANT EXECUTE ON FUNCTION glasshouse_heap_values(text[]) TO glasshouse_inspector;
       SQL
 
 services:

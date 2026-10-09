@@ -55,6 +55,12 @@ type Item struct {
 	HoffSize   int    `json:"t_hoff"`
 	NullBitmap string `json:"t_bits"`
 	DataHex    string `json:"t_data_hex"`
+	// ID and Payload are the tuple's real, decoded column values, read by
+	// joining the live table on this item's own ctid (block, lp). Both are
+	// nil when the join finds no row: a dead or unused line pointer no
+	// longer matches any live tuple at that location.
+	ID      *int    `json:"id"`
+	Payload *string `json:"payload"`
 }
 
 // Page is one block of the relation.
@@ -223,7 +229,67 @@ func readBlock(ctx context.Context, pool *pgxpool.Pool, block int) (Page, error)
 	if page.Items == nil {
 		page.Items = []Item{}
 	}
+
+	ctids := make([]string, len(page.Items))
+	for i, it := range page.Items {
+		ctids[i] = fmt.Sprintf("(%d,%d)", block, it.LP)
+	}
+	values, err := heapValues(ctx, pool, ctids)
+	if err != nil {
+		return Page{}, err
+	}
+	for i := range page.Items {
+		if v, ok := values[ctids[i]]; ok {
+			page.Items[i].ID = v.ID
+			page.Items[i].Payload = &v.Payload
+		}
+	}
 	return page, nil
+}
+
+// heapValue is one decoded live row, keyed by its ctid in the returned map.
+// ID is nil when the row's id column is itself NULL — insert_rows never
+// sets id, so that is a normal, real value, not a lookup miss.
+type heapValue struct {
+	ID      *int
+	Payload string
+}
+
+// heapValues looks up the real, decoded id/payload for a batch of ctids (in
+// pageinspect's "(block,offset)" text form) by joining the live table, via
+// the glasshouse_heap_values wrapper. A ctid with no live row at that
+// location (a dead tuple, or an internal index page's non-heap "ctid") is
+// simply absent from the result.
+func heapValues(ctx context.Context, pool *pgxpool.Pool, ctids []string) (map[string]heapValue, error) {
+	out := map[string]heapValue{}
+	if len(ctids) == 0 {
+		return out, nil
+	}
+	rows, err := pool.Query(ctx,
+		`SELECT ctid, id, payload FROM glasshouse_heap_values($1::text[])`,
+		ctids,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("postgres: heap_values: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var ctid string
+		var id sql.NullInt32
+		var v heapValue
+		if err := rows.Scan(&ctid, &id, &v.Payload); err != nil {
+			return nil, fmt.Errorf("postgres: scan heap value: %w", err)
+		}
+		if id.Valid {
+			n := int(id.Int32)
+			v.ID = &n
+		}
+		out[ctid] = v
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("postgres: heap values: %w", err)
+	}
+	return out, nil
 }
 
 // orElse returns s's value, or def if s is NULL.

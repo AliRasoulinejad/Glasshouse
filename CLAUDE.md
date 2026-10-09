@@ -108,6 +108,15 @@ progress; see `docs/superpowers/specs/2026-10-04-website-design.md`.
   first), ending at the last block, so the viewer can show pages side by
   side. Only the last block is diffed for events (`diff` in `heappage.go`);
   older pages are read-only context.
+- Heap items' `id`/`payload` and leaf-level index items' `value` are real,
+  decoded column values, not derived from the hex by the adapter — they
+  come from `heapValues` (`heappage.go`) joining the live table on `ctid`
+  through the `glasshouse_heap_values` wrapper. `id` is legitimately `NULL`
+  for every row `insert_rows` creates (it never sets `id`), so scan it as
+  nullable; don't treat a `NULL` id as a lookup miss. Never join on an
+  internal/root index page's `ctid` — there it is a downlink encoding a
+  child block, not a heap pointer, so joining it could coincidentally match
+  an unrelated live row at that block/offset.
 
 ## Conventions
 

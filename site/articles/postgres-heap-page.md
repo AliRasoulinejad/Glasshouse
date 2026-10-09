@@ -43,7 +43,10 @@ the right.
 - **Tuples** are the row data itself, packed in from the end of the page.
   `t_xmin` is the transaction ID that inserted the tuple. A tuple whose `lp`
   matches the item pointer you are looking at is the one that pointer leads
-  to.
+  to. Alongside the raw `t_data_hex` bytes, the detail panel also shows `id`
+  and `payload`: the real, decoded values, read live from the table by this
+  tuple's own position. "(none)" there means the pointer is dead or unused —
+  no live row sits at that position right now.
 - The gap between the item pointers and the tuples is free space: room for
   more rows before the page fills up.
 

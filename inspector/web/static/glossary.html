@@ -111,6 +111,12 @@
 
         <dt id="t_data_hex">t_data_hex</dt>
         <dd>The t_data_hex value shows the raw bytes of the tuple's column data, after the header, in hexadecimal format.</dd>
+
+        <dt id="id">id</dt>
+        <dd>The id value is the real, decoded value of the row's id column, read live from the table by its ctid. "(none)" means no live row exists at this location right now &mdash; this line pointer is dead or unused.</dd>
+
+        <dt id="payload">payload</dt>
+        <dd>The payload value is the real, decoded value of the row's payload column, read live from the table by its ctid. "(none)" means no live row exists at this location right now &mdash; this line pointer is dead or unused.</dd>
       </dl>
     </section>
   </main>

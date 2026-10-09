@@ -85,3 +85,13 @@ sometimes not a real index entry at all: it can be a "high key" (a copy of
 the page's upper bound) or, on the leftmost page of a level, a
 "minus infinity" sentinel with empty data — a future UI feature could
 detect and label these using `bt_page_stats`, but nothing does yet.
+
+`heap.pages[].items[].id`/`.payload` and `index.pages[].items[].value` are
+the real, decoded column values for that tuple location, looked up by
+joining the live table on `ctid` (`glasshouse_heap_values` in
+`compose.yml`) — not derived from `t_data_hex`/`data_hex` by the adapter
+itself. All three are `null` when no live row currently sits at that
+location (a dead or unused line pointer). `index[].items[].value` is also
+always `null` on an internal or root page (level > 0): there, `ctid`
+encodes a downlink to a child block, not a heap pointer, so it is never
+looked up.
