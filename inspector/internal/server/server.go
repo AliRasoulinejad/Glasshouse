@@ -268,7 +268,7 @@ func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
 		"status":         "ok",
 		"schema_version": adapter.SchemaVersion,
 		"target":         s.cfg.Target.Name,
-		"actions":        s.ActionNames(),
+		"actions":        s.ActionInfos(),
 	})
 }
 
@@ -415,12 +415,23 @@ func (s *Server) handleAction(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"action": name, "result": result})
 }
 
-// ActionNames lists the registered actions in sorted order.
-func (s *Server) ActionNames() []string {
-	names := make([]string, 0, len(s.actions))
-	for n := range s.actions {
-		names = append(names, n)
+// ActionInfo describes one registered action for the browser: enough to
+// label its button and show what it runs before and after it's pressed.
+type ActionInfo struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	// Query is the literal SQL the action runs, or "" if it has none (e.g.
+	// the mock adapter). The browser never supplies or edits this text; it
+	// is shown only so a reader can see what a button actually did.
+	Query string `json:"query"`
+}
+
+// ActionInfos lists the registered actions in sorted order.
+func (s *Server) ActionInfos() []ActionInfo {
+	infos := make([]ActionInfo, 0, len(s.actions))
+	for n, act := range s.actions {
+		infos = append(infos, ActionInfo{Name: n, Description: act.Description, Query: act.Query})
 	}
-	sort.Strings(names)
-	return names
+	sort.Slice(infos, func(i, j int) bool { return infos[i].Name < infos[j].Name })
+	return infos
 }

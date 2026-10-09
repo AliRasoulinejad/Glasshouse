@@ -111,6 +111,8 @@ type Adapter struct {
 	prevBlock int
 	prevLSN   string // "" until the first tick completes
 	tick      uint64 // increments once per poll tick, for correlation_id
+
+	lock heldLock // state for hold_lock/release_lock, see lockdemo.go
 }
 
 // New returns an adapter that polls every interval.
@@ -656,6 +658,7 @@ func (a *Adapter) Actions() map[string]adapter.Action {
 	return map[string]adapter.Action{
 		"insert_rows": {
 			Description: "Insert 10 rows into " + Relation + " (id: null, payload: a random 32-char hex string)",
+			Query:       "INSERT INTO glasshouse_demo (payload) SELECT md5(random()::text) FROM generate_series(1, 10)",
 			Run: func(ctx context.Context) (any, error) {
 				pool, err := a.getPool()
 				if err != nil {
@@ -672,6 +675,7 @@ func (a *Adapter) Actions() map[string]adapter.Action {
 		},
 		"update_rows": {
 			Description: "Overwrite payload on 3 random rows across the visible pages with a new random hex string (the old row version becomes a dead tuple)",
+			Query:       "WITH target AS (" + rowsOnVisiblePages + ") UPDATE glasshouse_demo d SET payload = md5(random()::text) FROM target t WHERE d.ctid = t.ctid",
 			Run: func(ctx context.Context) (any, error) {
 				pool, err := a.getPool()
 				if err != nil {
@@ -694,6 +698,7 @@ func (a *Adapter) Actions() map[string]adapter.Action {
 		},
 		"delete_rows": {
 			Description: "Delete 3 random rows across the visible pages (they become dead tuples until vacuumed)",
+			Query:       "WITH target AS (" + rowsOnVisiblePages + ") DELETE FROM glasshouse_demo d USING target t WHERE d.ctid = t.ctid",
 			Run: func(ctx context.Context) (any, error) {
 				pool, err := a.getPool()
 				if err != nil {
@@ -715,6 +720,7 @@ func (a *Adapter) Actions() map[string]adapter.Action {
 		},
 		"vacuum_full": {
 			Description: "VACUUM FULL " + Relation + " (reclaims space held by dead tuples)",
+			Query:       "VACUUM (FULL) glasshouse_demo",
 			Run: func(ctx context.Context) (any, error) {
 				pool, err := a.getPool()
 				if err != nil {
@@ -724,6 +730,79 @@ func (a *Adapter) Actions() map[string]adapter.Action {
 					return nil, err
 				}
 				return map[string]any{"vacuumed": true}, nil
+			},
+		},
+		"hold_lock": {
+			Description: "Lock the first row of " + Relation + " with SELECT ... FOR UPDATE and hold it open (press release_lock to let it go; press blocked_update meanwhile to see a backend wait on it)",
+			Query:       firstRowSQL + " FOR UPDATE",
+			Run: func(ctx context.Context) (any, error) {
+				pool, err := a.getPool()
+				if err != nil {
+					return nil, err
+				}
+				ctid, err := holdLock(&a.lock, pool)
+				if err != nil {
+					return nil, err
+				}
+				return map[string]any{"locked_row": ctid}, nil
+			},
+		},
+		"release_lock": {
+			Description: "Commit hold_lock's transaction and release its row lock",
+			Query:       "COMMIT",
+			Run: func(ctx context.Context) (any, error) {
+				if err := releaseLock(&a.lock); err != nil {
+					return nil, err
+				}
+				return map[string]any{"released": true}, nil
+			},
+		},
+		"blocked_update": {
+			Description: "UPDATE the row hold_lock last locked (blocks until release_lock is pressed)",
+			Query:       "UPDATE glasshouse_demo SET payload = md5(random()::text) WHERE ctid = (" + firstRowSQL + ")",
+			Run: func(ctx context.Context) (any, error) {
+				pool, err := a.getPool()
+				if err != nil {
+					return nil, err
+				}
+				tag, err := pool.Exec(ctx,
+					`UPDATE glasshouse_demo SET payload = md5(random()::text)
+					 WHERE ctid = (`+firstRowSQL+`)`)
+				if err != nil {
+					return nil, err
+				}
+				return map[string]any{"rows_updated": tag.RowsAffected()}, nil
+			},
+		},
+		"try_update_nowait": {
+			Description: "UPDATE the row hold_lock last locked, but fail immediately (no waiting) if it's already locked, instead of blocking like blocked_update",
+			Query:       "UPDATE glasshouse_demo SET payload = md5(random()::text) WHERE ctid = (" + firstRowSQL + " FOR UPDATE NOWAIT)",
+			Run: func(ctx context.Context) (any, error) {
+				pool, err := a.getPool()
+				if err != nil {
+					return nil, err
+				}
+				tag, err := pool.Exec(ctx,
+					`UPDATE glasshouse_demo SET payload = md5(random()::text)
+					 WHERE ctid = (`+firstRowSQL+` FOR UPDATE NOWAIT)`)
+				if err != nil {
+					return nil, err
+				}
+				return map[string]any{"rows_updated": tag.RowsAffected()}, nil
+			},
+		},
+		"long_scan": {
+			Description: "Run SELECT pg_sleep(15) on its own backend: busy for 15s waiting on its own timer, not on another session's lock",
+			Query:       "SELECT pg_sleep(15)",
+			Run: func(ctx context.Context) (any, error) {
+				pool, err := a.getPool()
+				if err != nil {
+					return nil, err
+				}
+				if _, err := pool.Exec(ctx, `SELECT pg_sleep(15)`); err != nil {
+					return nil, err
+				}
+				return map[string]any{"slept_seconds": 15}, nil
 			},
 		},
 	}

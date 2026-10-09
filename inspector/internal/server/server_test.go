@@ -141,6 +141,23 @@ func TestHostHeaderMustBeLoopbackListener(t *testing.T) {
 	}
 }
 
+func TestHealthActionsIncludeDescriptionAndQuery(t *testing.T) {
+	s := newTestServer(t, new(int))
+	rec := do(t, s, "GET", "/health", nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("/health: got %d", rec.Code)
+	}
+	var body struct {
+		Actions []ActionInfo `json:"actions"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("decode /health: %v", err)
+	}
+	if len(body.Actions) != 1 || body.Actions[0].Name != "ping" || body.Actions[0].Description != "test" {
+		t.Fatalf("got actions %+v, want one ping action with its description", body.Actions)
+	}
+}
+
 func TestHealthIsOpenToAnyOriginOthersAreNot(t *testing.T) {
 	s := newTestServer(t, new(int))
 	rec := do(t, s, "GET", "/health", func(r *http.Request) { r.Header.Set("Origin", "https://random.example") })

@@ -15,7 +15,7 @@ func TestListActionsPrintsPostgresActionsWithoutDSN(t *testing.T) {
 	if err := listActions("postgres", &out); err != nil {
 		t.Fatal(err)
 	}
-	want := "delete_rows\ninsert_rows\nupdate_rows\nvacuum_full"
+	want := "blocked_update\ndelete_rows\nhold_lock\ninsert_rows\nlong_scan\nrelease_lock\ntry_update_nowait\nupdate_rows\nvacuum_full"
 	if got := strings.TrimSpace(out.String()); got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}

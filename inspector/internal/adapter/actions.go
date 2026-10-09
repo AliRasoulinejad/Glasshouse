@@ -7,7 +7,11 @@ import "context"
 // browser can choose is which named action to invoke.
 type Action struct {
 	Description string
-	Run         func(ctx context.Context) (any, error)
+	// Query is the literal SQL statement Run executes, shown to the browser
+	// so a reader can see exactly what a button triggers. Empty for actions
+	// that run no single fixed statement (e.g. the mock adapter's "bump").
+	Query string
+	Run   func(ctx context.Context) (any, error)
 }
 
 // Actioner is implemented by adapters that expose allow-listed actions.

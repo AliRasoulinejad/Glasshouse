@@ -74,6 +74,21 @@ body {
 .muted { color: var(--muted); }
 .small { font-size: 13px; }
 
+.action-log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 10em;
+  overflow-y: auto;
+}
+.action-log li {
+  padding: 2px 0;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--mono, monospace);
+  word-break: break-all;
+}
+.action-log li:last-child { border-bottom: none; }
+
 /* ---- a small quartered-pane glyph, used for the brand mark and the empty
    state; it is the one recurring motif, drawn in CSS so it needs no asset
    or network request. ---- */

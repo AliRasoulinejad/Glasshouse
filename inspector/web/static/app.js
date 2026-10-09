@@ -271,17 +271,20 @@ function renderView() {
 
 // ---- actions --------------------------------------------------------------
 
-function renderActions(names) {
+const MAX_ACTION_LOG = 8;
+
+function renderActions(actions) {
   const el = $('actions');
   el.replaceChildren();
-  for (const name of names) {
+  for (const action of actions) {
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.textContent = name.replaceAll('_', ' ');
-    btn.addEventListener('click', () => runAction(name, btn));
+    btn.textContent = action.name.replaceAll('_', ' ');
+    if (action.description) btn.title = action.description;
+    btn.addEventListener('click', () => runAction(action, btn));
     el.append(btn);
   }
-  if (names.length === 0) {
+  if (actions.length === 0) {
     const none = document.createElement('span');
     none.className = 'muted small';
     none.textContent = 'No actions available.';
@@ -289,22 +292,33 @@ function renderActions(names) {
   }
 }
 
-async function runAction(name, btn) {
-  const result = $('action-result');
+// logAction prepends one entry to the action log so a reader can trace what
+// every button press actually ran, not just the most recent one.
+function logAction(text) {
+  const log = $('action-result');
+  const entry = document.createElement('li');
+  entry.textContent = text;
+  log.prepend(entry);
+  while (log.children.length > MAX_ACTION_LOG) {
+    log.lastChild.remove();
+  }
+}
+
+async function runAction(action, btn) {
   btn.disabled = true;
-  result.textContent = `Running ${name}…`;
   try {
     // The custom header is what the server checks. A cross-site form cannot
     // set it, so only this page can trigger an action.
-    const res = await fetch(`/actions/${encodeURIComponent(name)}`, {
+    const res = await fetch(`/actions/${encodeURIComponent(action.name)}`, {
       method: 'POST',
       headers: { 'X-Glasshouse-Action': '1' },
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    result.textContent = `${name}: done`;
+    const query = action.query ? `: ${action.query}` : '';
+    logAction(`${action.name}${query}`);
     scheduleRefresh();
   } catch (err) {
-    result.textContent = `${name} failed (${err.message}).`;
+    logAction(`${action.name} failed (${err.message}).`);
   } finally {
     btn.disabled = false;
   }
