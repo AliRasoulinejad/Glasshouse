@@ -34,10 +34,20 @@ const maxQueries = 20
 // otherwise show up in its own output every tick) and idle connections,
 // keeping the panel to backends actually doing work. datname is scoped to
 // the Inspector's own connected database, not a browser-chosen value.
+//
+// usename, application_name, state, and query are coalesced to an empty
+// string because background workers (autovacuum chief among them, which
+// this lab triggers via delete_rows/update_rows) have no pg_authid row:
+// st_userid is InvalidOid, so the LEFT JOIN to pg_authid leaves usename
+// NULL, and some of these workers leave the other columns NULL too.
+// Scanning a NULL into a plain Go string fails the whole row scan, which
+// fails Snapshot() for as long as the worker runs — see the WAL-record NULL
+// fix in 6767ef6 for the same class of bug.
 const runningQueriesSQL = `
-	SELECT pid, usename, application_name, state,
+	SELECT pid, coalesce(usename, ''), coalesce(application_name, ''),
+	       coalesce(state, ''),
 	       coalesce(wait_event_type, ''), coalesce(wait_event, ''),
-	       query_start, query
+	       query_start, coalesce(query, '')
 	FROM pg_stat_activity
 	WHERE datname = current_database()
 	  AND pid != pg_backend_pid()

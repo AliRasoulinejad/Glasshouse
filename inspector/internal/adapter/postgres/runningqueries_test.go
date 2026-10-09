@@ -3,6 +3,7 @@ package postgres
 import (
 	"database/sql"
 	"encoding/json"
+	"regexp"
 	"testing"
 	"time"
 )
@@ -21,6 +22,22 @@ func TestQueryDurationNullStart(t *testing.T) {
 	got := queryDuration(sql.NullTime{Valid: false}, now)
 	if got != 0 {
 		t.Errorf("want 0 for NULL query_start, got %d", got)
+	}
+}
+
+// TestRunningQueriesSQLCoalescesNullableColumns guards against a crash seen
+// in the lab: pg_stat_activity can have NULL usename (e.g. autovacuum
+// workers, whose st_userid is InvalidOid, so the LEFT JOIN to pg_authid
+// leaves usename NULL), and NULL application_name/state/query for similar
+// background-worker rows. Scanning NULL into a plain Go string fails the
+// whole row scan and, with it, Snapshot(). Every one of these four columns
+// must be wrapped in a coalesce to the empty string in runningQueriesSQL.
+func TestRunningQueriesSQLCoalescesNullableColumns(t *testing.T) {
+	for _, col := range []string{"usename", "application_name", "state", "query"} {
+		re := regexp.MustCompile(`coalesce\(\s*` + col + `\s*,\s*''\s*\)`)
+		if !re.MatchString(runningQueriesSQL) {
+			t.Errorf("want runningQueriesSQL to coalesce %q to an empty string, it did not (SQL: %s)", col, runningQueriesSQL)
+		}
 	}
 }
 

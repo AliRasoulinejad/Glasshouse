@@ -21,6 +21,7 @@ function cell(tag, text) {
 // child element so placement within a larger view stays under their
 // control (see postgres-heap-page.js and postgres-heap-and-index.js).
 export function renderRunningQueries(container, queries) {
+  queries = queries ?? [];
   const heading = document.createElement('h3');
   heading.style.margin = '20px 0 8px';
   heading.textContent = `Running queries (${queries.length})`;
