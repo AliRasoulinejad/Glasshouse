@@ -38,7 +38,7 @@ async function checkHealth() {
       state.health = health;
       onFirstHealthy(health);
     }
-    setStatus('live', `Live — ${health.target}`);
+    setStatus('live', 'Live');
     hideNotice();
   } catch {
     if (state.health) {
@@ -55,7 +55,13 @@ async function checkHealth() {
 }
 
 function onFirstHealthy(health) {
-  $('target').textContent = `${health.target} · schema v${health.schema_version}`;
+  const name = document.createElement('span');
+  name.className = 'target-name';
+  name.textContent = health.target;
+  const schema = document.createElement('span');
+  schema.className = 'target-schema';
+  schema.textContent = `schema v${health.schema_version}`;
+  $('target').replaceChildren(name, schema);
   renderActions(health.actions ?? []);
   openStream();
   loadSnapshot();
@@ -145,6 +151,7 @@ function focusEvent() {
 function renderTimeline() {
   const el = $('timeline');
   el.replaceChildren();
+  el.dataset.live = String(state.cursor === null);
   state.events.forEach((ev, i) => {
     const tick = document.createElement('button');
     tick.type = 'button';
@@ -232,7 +239,16 @@ function renderView() {
   if (!snap) {
     $('view-title').textContent = 'Waiting for a snapshot';
     $('view-type').textContent = '';
-    container.replaceChildren();
+    const empty = document.createElement('div');
+    empty.className = 'empty-state';
+    const icon = document.createElement('span');
+    icon.className = 'empty-icon pane-glyph';
+    icon.setAttribute('aria-hidden', 'true');
+    const text = document.createElement('p');
+    text.className = 'muted small';
+    text.textContent = "The inspector will show the target's state as soon as it connects.";
+    empty.append(icon, text);
+    container.replaceChildren(empty);
     return;
   }
   $('view-type').textContent = snap.type;
