@@ -3769,7 +3769,20 @@
           }
         ],
         "truncated": false
-      }
+      },
+      "queries": [
+        {
+          "pid": 418,
+          "usename": "glasshouse_inspector",
+          "application_name": "glasshouse-demo-action",
+          "state": "active",
+          "wait_event_type": "Lock",
+          "wait_event": "tuple",
+          "query_start": "2026-10-08T22:14:30.500000000Z",
+          "duration_ms": 438,
+          "query": "UPDATE glasshouse_demo SET payload = $1 WHERE ctid = $2"
+        }
+      ]
     }
   },
   "events": [

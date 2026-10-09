@@ -50,6 +50,7 @@ configs:
       GRANT CONNECT ON DATABASE glasshouse TO glasshouse_inspector;
       GRANT USAGE ON SCHEMA public TO glasshouse_inspector;
       GRANT SELECT, INSERT, UPDATE, DELETE, MAINTAIN ON glasshouse_demo TO glasshouse_inspector;
+      GRANT pg_read_all_stats TO glasshouse_inspector;
 
       -- pageinspect refuses non-superusers even with EXECUTE granted, so the
       -- Inspector gets two SECURITY DEFINER wrappers owned by the superuser.

@@ -347,6 +347,19 @@
             }
           ]
         }
+      ],
+      "queries": [
+        {
+          "pid": 412,
+          "usename": "glasshouse_inspector",
+          "application_name": "glasshouse-demo-action",
+          "state": "active",
+          "wait_event_type": "",
+          "wait_event": "",
+          "query_start": "2026-10-03T19:23:41.000000000Z",
+          "duration_ms": 12,
+          "query": "INSERT INTO glasshouse_demo (payload) VALUES ($1)"
+        }
       ]
     }
   },
