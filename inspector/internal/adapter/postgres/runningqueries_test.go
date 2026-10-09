@@ -44,3 +44,27 @@ func TestHeapSnapshotJSONIncludesQueries(t *testing.T) {
 		t.Error("want top-level \"relation\" key (from embedded HeapPages) in heapSnapshot JSON")
 	}
 }
+
+func TestHeapAndIndexSnapshotJSONIncludesQueries(t *testing.T) {
+	snap := heapAndIndexSnapshot{
+		HeapAndIndex: HeapAndIndex{
+			Relation: "glasshouse_demo",
+			Heap:     HeapPages{Relation: "glasshouse_demo", Pages: []Page{}},
+			Index:    IndexPages{IndexName: "glasshouse_demo_payload_idx", Pages: []IndexPage{}},
+		},
+		Queries: []RunningQuery{{PID: 123, State: "active"}},
+	}
+	data, err := json.Marshal(snap)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var decoded map[string]any
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatal(err)
+	}
+	for _, key := range []string{"queries", "relation", "heap", "index"} {
+		if _, ok := decoded[key]; !ok {
+			t.Errorf("want top-level %q key in heapAndIndexSnapshot JSON", key)
+		}
+	}
+}

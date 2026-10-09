@@ -215,7 +215,16 @@ func NewWithIndex(interval time.Duration) *WithIndexAdapter {
 	return &WithIndexAdapter{Adapter: New(interval)}
 }
 
-// Snapshot returns the current heap pages and index pages together.
+// heapAndIndexSnapshot is the data payload for postgres.heap_and_index:
+// HeapAndIndex's fields (relation, heap, index) plus a sibling queries
+// list, read once per poll alongside the heap and index pages.
+type heapAndIndexSnapshot struct {
+	HeapAndIndex
+	Queries []RunningQuery `json:"queries"`
+}
+
+// Snapshot returns the current heap pages, index pages, and active queries
+// together.
 func (a *WithIndexAdapter) Snapshot(ctx context.Context) (adapter.Snapshot, error) {
 	heap, err := a.readPages(ctx)
 	if err != nil {
@@ -226,6 +235,10 @@ func (a *WithIndexAdapter) Snapshot(ctx context.Context) (adapter.Snapshot, erro
 		return adapter.Snapshot{}, err
 	}
 	index, err := readIndexPages(ctx, pool)
+	if err != nil {
+		return adapter.Snapshot{}, err
+	}
+	queries, err := readRunningQueries(ctx, pool)
 	if err != nil {
 		return adapter.Snapshot{}, err
 	}
@@ -240,10 +253,13 @@ func (a *WithIndexAdapter) Snapshot(ctx context.Context) (adapter.Snapshot, erro
 		Source:    source,
 		Seq:       seq,
 		Timestamp: time.Now().UTC(),
-		Data: HeapAndIndex{
-			Relation: Relation,
-			Heap:     heap,
-			Index:    index,
+		Data: heapAndIndexSnapshot{
+			HeapAndIndex: HeapAndIndex{
+				Relation: Relation,
+				Heap:     heap,
+				Index:    index,
+			},
+			Queries: queries,
 		},
 	}, nil
 }
