@@ -20,8 +20,8 @@ layout around that data, not the data itself.
 Pull the compose file and start Postgres and the Inspector together.
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/AliRasoulinejad/Glasshouse/v0.2.0/adapters/postgres/compose.yml | \
-  GLASSHOUSE_INSPECTOR_CONTEXT=https://github.com/AliRasoulinejad/Glasshouse.git#v0.2.0:inspector \
+curl -fsSL https://raw.githubusercontent.com/AliRasoulinejad/Glasshouse/v0.3.0/adapters/postgres/compose.yml | \
+  GLASSHOUSE_INSPECTOR_CONTEXT=https://github.com/AliRasoulinejad/Glasshouse.git#v0.3.0:inspector \
   docker compose -f - up -d --build --wait
 ```
 
@@ -91,8 +91,8 @@ thing, and a checkout is not required to follow this article.
 Stop the lab and remove its data with the same compose file:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/AliRasoulinejad/Glasshouse/v0.2.0/adapters/postgres/compose.yml | \
-  GLASSHOUSE_INSPECTOR_CONTEXT=https://github.com/AliRasoulinejad/Glasshouse.git#v0.2.0:inspector \
+curl -fsSL https://raw.githubusercontent.com/AliRasoulinejad/Glasshouse/v0.3.0/adapters/postgres/compose.yml | \
+  GLASSHOUSE_INSPECTOR_CONTEXT=https://github.com/AliRasoulinejad/Glasshouse.git#v0.3.0:inspector \
   docker compose -f - down -v
 ```
 
