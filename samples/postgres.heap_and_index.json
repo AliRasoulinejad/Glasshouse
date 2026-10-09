@@ -3778,7 +3778,7 @@
           "state": "active",
           "wait_event_type": "Lock",
           "wait_event": "tuple",
-          "query_start": "2026-10-08T22:14:30.500000000Z",
+          "query_start": "2026-10-08T22:14:30Z",
           "duration_ms": 438,
           "query": "UPDATE glasshouse_demo SET payload = $1 WHERE ctid = $2"
         }
