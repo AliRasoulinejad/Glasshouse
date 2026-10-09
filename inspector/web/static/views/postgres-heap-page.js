@@ -361,12 +361,12 @@ export function renderHeapSection(container, data, focusLP) {
 // correlation_id, oldest first. Returns [] if focus has no correlation_id
 // or no visible wal_record event matches it (e.g. its WAL record touched a
 // block outside the window currently shown).
-function correlatedWALRecords(events, focus) {
+export function correlatedWALRecords(events, focus) {
   if (!focus?.correlation_id) return [];
   return events.filter((ev) => ev.kind === 'wal_record' && ev.correlation_id === focus.correlation_id);
 }
 
-function walRecordsSection(records) {
+export function walRecordsSection(records) {
   const section = document.createElement('div');
   section.className = 'wal-records';
   const heading = document.createElement('h4');

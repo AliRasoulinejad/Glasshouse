@@ -1,5 +1,5 @@
 import { registerView } from './registry.js';
-import { renderHeapSection } from './postgres-heap-page.js';
+import { renderHeapSection, correlatedWALRecords, walRecordsSection } from './postgres-heap-page.js';
 
 function keyChip(item) {
   const chip = document.createElement('span');
@@ -120,7 +120,7 @@ function drawConnectors(treeWrap) {
 
 registerView('postgres.heap_and_index', {
   title: 'Heap page + B-tree index',
-  render(container, { snapshot, focus }) {
+  render(container, { snapshot, events, focus }) {
     const data = snapshot.data;
 
     const wrap = document.createElement('div');
@@ -128,6 +128,10 @@ registerView('postgres.heap_and_index', {
 
     const heapSection = document.createElement('div');
     renderHeapSection(heapSection, data.heap, focus?.detail?.lp ?? null);
+    const walRecords = correlatedWALRecords(events, focus);
+    if (walRecords.length > 0) {
+      heapSection.querySelector('.heap-page')?.append(walRecordsSection(walRecords));
+    }
 
     const indexHeading = document.createElement('h3');
     indexHeading.style.margin = '20px 0 8px';
