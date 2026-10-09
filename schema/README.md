@@ -96,8 +96,14 @@ next to each adapter — this table is just a map to them:
 
 | Type | Shape | Defined in |
 | --- | --- | --- |
-| `postgres.heap_page` | `{relation, pages: [{block, header, free_space, items}]}` | `inspector/internal/adapter/postgres/heappage.go` |
-| `postgres.heap_and_index` | `{relation, heap: <postgres.heap_page's data>, index: {index_name, pages: [{block, level, type, items}], truncated}}` | `inspector/internal/adapter/postgres/btreepage.go` |
+| `postgres.heap_page` | `{relation, pages: [{block, header, free_space, items}], queries: [{pid, usename, application_name, state, wait_event_type, wait_event, query_start, duration_ms, query}]}` | `inspector/internal/adapter/postgres/heappage.go` |
+| `postgres.heap_and_index` | `{relation, heap: <postgres.heap_page's data, minus queries>, index: {index_name, pages: [{block, level, type, items}], truncated}, queries: [{pid, usename, application_name, state, wait_event_type, wait_event, query_start, duration_ms, query}]}` | `inspector/internal/adapter/postgres/btreepage.go` |
+
+`queries` is a live, point-in-time read of `pg_stat_activity` for the
+target database, excluding the Inspector's own backend and idle
+connections, capped at 20 rows. `query_start` is RFC3339, or `""` if NULL.
+`wait_event_type`/`wait_event` are `""` when the backend is not waiting on
+anything (e.g. actively using CPU).
 
 `index.pages[].items[].data_hex` is Postgres's native `bt_page_items` hex
 format: SPACE-SEPARATED byte pairs (e.g. `"78 65 39 32"`), not contiguous
