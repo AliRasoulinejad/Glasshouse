@@ -5,13 +5,23 @@ import { renderRunningQueries } from './running-queries.js';
 function keyChip(item) {
   const chip = document.createElement('span');
   chip.className = 'index-chip' + (item.dead ? ' dead' : '');
-  chip.textContent = item.value
-    ? item.value
-    : item.data_hex ? item.data_hex.slice(0, 23) : '(none)';
   chip.title = `itemoffset=${item.itemoffset} ctid=${item.ctid}` +
     (item.value ? ` value=${item.value}` : '') +
     (item.data_hex ? ` data_hex=${item.data_hex}` : '') +
     (item.dead ? ' (dead)' : '');
+
+  const value = document.createElement('span');
+  value.className = 'index-chip-value';
+  value.textContent = item.value
+    ? item.value
+    : item.data_hex ? item.data_hex.slice(0, 23) : '(none)';
+  chip.append(value);
+
+  const tid = document.createElement('span');
+  tid.className = 'index-chip-tid';
+  tid.textContent = item.ctid;
+  chip.append(tid);
+
   return chip;
 }
 

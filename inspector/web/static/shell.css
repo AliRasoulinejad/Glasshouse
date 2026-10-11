@@ -355,6 +355,10 @@ button:focus-visible, select:focus-visible { outline: 2px solid var(--accent); o
 .index-tree-lines line { stroke: var(--line-strong); stroke-width: 1.5; }
 .index-items { display: flex; gap: 4px; flex-wrap: wrap; }
 .index-chip {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
   font: 11px var(--mono);
   padding: 2px 6px;
   border-radius: 4px;
@@ -362,6 +366,7 @@ button:focus-visible, select:focus-visible { outline: 2px solid var(--accent); o
   border: 1px solid var(--line);
 }
 .index-chip.dead { background: var(--cell); color: var(--muted); text-decoration: line-through; }
+.index-chip-tid { font-size: 9px; color: var(--muted); }
 
 table.kv { border-collapse: collapse; width: 100%; font: 12px/1.5 var(--mono); }
 table.kv th, table.kv td {
