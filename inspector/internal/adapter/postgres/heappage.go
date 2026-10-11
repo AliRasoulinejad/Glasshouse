@@ -718,8 +718,22 @@ func (a *Adapter) Actions() map[string]adapter.Action {
 				return map[string]any{"rows_deleted": tag.RowsAffected()}, nil
 			},
 		},
+		"vacuum": {
+			Description: "VACUUM " + Relation + " (marks dead tuples reusable in place, without rewriting the table)",
+			Query:       "VACUUM glasshouse_demo",
+			Run: func(ctx context.Context) (any, error) {
+				pool, err := a.getPool()
+				if err != nil {
+					return nil, err
+				}
+				if _, err := pool.Exec(ctx, `VACUUM glasshouse_demo`); err != nil {
+					return nil, err
+				}
+				return map[string]any{"vacuumed": true}, nil
+			},
+		},
 		"vacuum_full": {
-			Description: "VACUUM FULL " + Relation + " (reclaims space held by dead tuples)",
+			Description: "VACUUM FULL " + Relation + " (reclaims space held by dead tuples by rewriting the table onto a new relfilenode)",
 			Query:       "VACUUM (FULL) glasshouse_demo",
 			Run: func(ctx context.Context) (any, error) {
 				pool, err := a.getPool()
