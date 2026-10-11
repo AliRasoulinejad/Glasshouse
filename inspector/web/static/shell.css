@@ -215,7 +215,15 @@ body {
 .empty-state p { margin: 0; max-width: 32ch; }
 
 .layout > *, .side > * { min-width: 0; }
-.side { display: grid; gap: 16px; align-content: start; }
+.side {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+  position: sticky;
+  top: 16px;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+}
 .card h2 {
   font-size: 13px;
   margin: 0 0 10px;
