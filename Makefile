@@ -11,6 +11,9 @@
 #   make web-capture  re-capture the hosted articles' step snapshots from a fresh stack
 #   make web-build    build the hosted (Next.js) site into web/out
 #   make web-test     typecheck and test the hosted site
+#   make gateway-integration   start and remove one real lab through Docker
+#   make deploy-up    build and start the hosted stack (deploy/.env), load lab images
+#   make deploy-down  stop the hosted stack (labs die with it)
 #
 # Go runs on the host by default. If Go is not installed, use Docker:
 #   make test USE_DOCKER=1
@@ -18,6 +21,7 @@
 INSPECTOR_DIR := inspector
 PG_DIR        := adapters/postgres
 SITE_DIR      := site
+GATEWAY_DIR   := gateway
 ADDR          ?= 127.0.0.1:8765
 ORIGIN        ?= https://article.example
 PG_DSN        ?= postgres://glasshouse_inspector:glasshouse-local-inspector@127.0.0.1:55432/glasshouse?sslmode=disable
@@ -35,14 +39,18 @@ ifeq ($(USE_DOCKER),1)
   # module, so it needs its own container mount.
   GO_SITE   = docker run --rm -u $$(id -u):$$(id -g) -e HOME=/tmp -e GOPATH=/tmp/gopath -e GOCACHE=/tmp/gocache -e CGO_ENABLED=0 -v $(CURDIR)/$(SITE_DIR):/src -w /src $(GO_IMAGE) go
   GOFMT_SITE = docker run --rm -u $$(id -u):$$(id -g) -e HOME=/tmp -v $(CURDIR)/$(SITE_DIR):/src -w /src $(GO_IMAGE) gofmt
+  GO_GW     = docker run --rm -u $$(id -u):$$(id -g) -e HOME=/tmp -e GOPATH=/tmp/gopath -e GOCACHE=/tmp/gocache -e CGO_ENABLED=0 -v $(CURDIR)/$(GATEWAY_DIR):/src -w /src $(GO_IMAGE) go
+  GOFMT_GW  = docker run --rm -u $$(id -u):$$(id -g) -e HOME=/tmp -v $(CURDIR)/$(GATEWAY_DIR):/src -w /src $(GO_IMAGE) gofmt
 else
   GO        = go
   GOFMT     = gofmt
   GO_SITE   = go
   GOFMT_SITE = gofmt
+  GO_GW     = go
+  GOFMT_GW  = gofmt
 endif
 
-.PHONY: help test vet fmt-check fmt build run-mock run-postgres stack-up stack-down stack-restart stack-logs demo site-actions site-build site-fmt-check site-vet web-deps web-capture web-build web-test clean
+.PHONY: help test vet fmt-check fmt build run-mock run-postgres stack-up stack-down stack-restart stack-logs demo site-actions site-build site-fmt-check site-vet web-deps web-capture web-build web-test gateway-fmt-check gateway-vet gateway-integration inspector-image deploy-up deploy-images deploy-down clean
 
 help:
 	@grep -E '^#   make ' Makefile | sed 's/^#   //'
@@ -56,6 +64,7 @@ fmt-check:
 fmt:
 	cd $(INSPECTOR_DIR) && $(GOFMT) -w .
 	cd $(SITE_DIR) && $(GOFMT_SITE) -w .
+	cd $(GATEWAY_DIR) && $(GOFMT_GW) -w .
 
 vet:
 	cd $(INSPECTOR_DIR) && $(GO) vet ./...
@@ -69,9 +78,17 @@ site-fmt-check:
 site-vet:
 	cd $(SITE_DIR) && $(GO_SITE) vet ./...
 
-test: fmt-check vet site-fmt-check site-vet
+gateway-fmt-check:
+	@out=$$(cd $(GATEWAY_DIR) && $(GOFMT_GW) -l .); \
+	 if [ -n "$$out" ]; then echo "gofmt needed in gateway/:"; echo "$$out"; exit 1; fi
+
+gateway-vet:
+	cd $(GATEWAY_DIR) && $(GO_GW) vet ./...
+
+test: fmt-check vet site-fmt-check site-vet gateway-fmt-check gateway-vet
 	cd $(INSPECTOR_DIR) && $(GO) test -count=1 ./...
 	cd $(SITE_DIR) && $(GO_SITE) test -count=1 ./...
+	cd $(GATEWAY_DIR) && $(GO_GW) test -count=1 ./...
 
 build:
 	mkdir -p $(BIN_DIR)
@@ -133,6 +150,37 @@ web-build: site-actions
 
 web-test: site-actions
 	cd $(WEB_DIR) && npx tsc --noEmit && node --test scripts/
+
+# ---- hosted gateway (gateway/, deploy/) -------------------------------------
+
+LAB_IMAGES := glasshouse-inspector:latest postgres:17-alpine
+DEPLOY     := docker compose -f deploy/compose.yml --env-file deploy/.env
+
+inspector-image:
+	docker build -t glasshouse-inspector:latest $(INSPECTOR_DIR)
+
+# Runs in a container on the host network with the Docker socket, the way
+# the gateway shares dind's network namespace in production.
+gateway-integration: inspector-image
+	docker pull -q postgres:17-alpine
+	docker run --rm --network host -v /var/run/docker.sock:/var/run/docker.sock \
+	  -v $(CURDIR)/$(GATEWAY_DIR):/src -v $(CURDIR)/$(PG_DIR)/compose.yml:/lab/compose.yml:ro \
+	  -v $(CURDIR)/$(GATEWAY_DIR)/lab.override.yml:/lab/lab.override.yml:ro \
+	  -e GLASSHOUSE_LAB_DIR=/lab -e CGO_ENABLED=0 -w /src $(GO_IMAGE) \
+	  sh -c 'apk add -q docker-cli docker-cli-compose && go test -count=1 -run Docker -v ./internal/lab/'
+
+# Lab starts never pull: the images are loaded into dind here.
+deploy-images: inspector-image
+	docker pull -q postgres:17-alpine
+	docker save $(LAB_IMAGES) | $(DEPLOY) exec -T dind docker -H unix:///run/dind/docker.sock load
+
+deploy-up: web-build
+	$(DEPLOY) up -d --build
+	$(MAKE) deploy-images
+	$(DEPLOY) restart gateway
+
+deploy-down:
+	$(DEPLOY) down
 
 # ---- misc -------------------------------------------------------------------
 

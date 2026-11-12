@@ -33,6 +33,9 @@ export function LabSection({ actions: wanted }: { actions: string[] }) {
   const [snap, setSnap] = useState<Snapshot | null>(null);
   const [lines, setLines] = useState<Line[]>([]);
   const [busy, setBusy] = useState(false);
+  // Per action, not global: release_lock must stay pressable while
+  // blocked_update is still waiting on the lock.
+  const [pending, setPending] = useState<Set<string>>(new Set());
   const term = useRef<HTMLPreElement>(null);
   const log = (l: Line) => setLines((ls) => [...ls.slice(-200), l]);
 
@@ -94,7 +97,7 @@ export function LabSection({ actions: wanted }: { actions: string[] }) {
   }
 
   async function run(a: ActionInfo) {
-    setBusy(true);
+    setPending((p) => new Set(p).add(a.name));
     log({ kind: 'cmd', text: `glasshouse=> ${a.query};` });
     try {
       const { status, body } = await api<{ result?: unknown; error?: string }>(`/api/lab/actions/${encodeURIComponent(a.name)}`, {
@@ -105,7 +108,7 @@ export function LabSection({ actions: wanted }: { actions: string[] }) {
     } catch {
       log({ kind: 'err', text: 'ERROR:  the lab did not answer' });
     }
-    setBusy(false);
+    setPending((p) => { const n = new Set(p); n.delete(a.name); return n; });
     refreshSnap();
   }
 
@@ -155,7 +158,7 @@ export function LabSection({ actions: wanted }: { actions: string[] }) {
               <div className="lab-controls">
                 <div className="actions">
                   {available.map((a) => (
-                    <button key={a.name} onClick={() => run(a)} disabled={busy} title={a.description}>{a.name}</button>
+                    <button key={a.name} onClick={() => run(a)} disabled={pending.has(a.name)} title={a.description}>{a.name}</button>
                   ))}
                 </div>
                 <pre className="terminal" ref={term} aria-label="Terminal output" aria-live="polite">

@@ -1,0 +1,70 @@
+# Glasshouse hosted stack for one VPS: dind (the lab daemon), the gateway,
+# and Caddy, all in ONE network namespace (dind's):
+#
+#   - The gateway reaches each lab Inspector by container IP on that lab's
+#     internal network, which exists only inside dind's namespace.
+#   - The gateway listens on 127.0.0.1:8080; Caddy, in the same namespace, is
+#     its only client. Lab containers see only their bridge address, so they
+#     reach neither the gateway nor the dind API (a unix socket shared with
+#     the gateway alone).
+#   - Containers keep separate environments: gateway secrets are not in dind's
+#     or any lab's env. dind is privileged, which can reach the host's disks;
+#     see gateway/README.md "Isolation" before trusting that boundary.
+#
+#   cp deploy/env.example deploy/.env    # fill it in
+#   make deploy-up                       # build, start, load lab images
+services:
+  dind:
+    image: docker:29-dind
+    privileged: true
+    # Starting with "dockerd" skips the image's default listeners, which
+    # include an unauthenticated tcp://0.0.0.0:2375 when TLS is off: lab
+    # containers could reach that. The only API is a unix socket on a volume
+    # shared with the gateway.
+    command: ["dockerd", "--host=unix:///run/dind/docker.sock"]
+    volumes:
+      - dind-sock:/run/dind
+      - dind-data:/var/lib/docker
+    ports:
+      - "${GLASSHOUSE_HTTP_PORT:-80}:80"
+      - "${GLASSHOUSE_HTTPS_PORT:-443}:443"
+    restart: unless-stopped
+
+  gateway:
+    build:
+      context: ..
+      dockerfile: gateway/Dockerfile
+    image: glasshouse-gateway:latest
+    network_mode: service:dind
+    command: ["-addr", "127.0.0.1:8080"]
+    environment:
+      DOCKER_HOST: unix:///run/dind/docker.sock
+      GLASSHOUSE_PUBLIC_URL: ${GLASSHOUSE_PUBLIC_URL:?set GLASSHOUSE_PUBLIC_URL in deploy/.env}
+      GLASSHOUSE_SESSION_KEY: ${GLASSHOUSE_SESSION_KEY:?set GLASSHOUSE_SESSION_KEY in deploy/.env}
+      GLASSHOUSE_GITHUB_CLIENT_ID: ${GLASSHOUSE_GITHUB_CLIENT_ID:-}
+      GLASSHOUSE_GITHUB_CLIENT_SECRET: ${GLASSHOUSE_GITHUB_CLIENT_SECRET:-}
+      GLASSHOUSE_GOOGLE_CLIENT_ID: ${GLASSHOUSE_GOOGLE_CLIENT_ID:-}
+      GLASSHOUSE_GOOGLE_CLIENT_SECRET: ${GLASSHOUSE_GOOGLE_CLIENT_SECRET:-}
+    volumes:
+      - dind-sock:/run/dind
+    depends_on:
+      - dind
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2.10-alpine
+    network_mode: service:dind
+    environment:
+      GLASSHOUSE_SITE_ADDRESS: ${GLASSHOUSE_SITE_ADDRESS:?set GLASSHOUSE_SITE_ADDRESS in deploy/.env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ../web/out:/srv/site:ro
+      - caddy-data:/data
+    depends_on:
+      - gateway
+    restart: unless-stopped
+
+volumes:
+  dind-sock:
+  dind-data:
+  caddy-data:

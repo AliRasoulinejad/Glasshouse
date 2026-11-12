@@ -2,8 +2,9 @@
 
 Glasshouse shows the real internals of running systems (PostgreSQL first) from
 real, unmodified services. Every visualization must trace back to data pulled
-from a running instance. No simulations, no user code execution, no hosted
-multi-tenant backend.
+from a running instance. No simulations, no user code execution. The one
+hosted backend is the gateway (`gateway/`): one isolated, throwaway lab per
+signed-in reader, buttons only.
 
 ## Layout (monorepo)
 
@@ -23,6 +24,15 @@ multi-tenant backend.
 - `site/` — static articles, built by `make site-build`; plain files, no backend.
   Deployed to GitHub Pages by `.github/workflows/pages.yml` on every push to
   `main` that touches `site/` or the Inspector's action list.
+- `web/` — hosted site: Next.js 15 static export (Node 18 on this machine,
+  so not Next 16). Articles in `content/articles/*.md` declare ordered
+  `steps` in front matter; `public/snapshots/<slug>/<step>.json` are real
+  captures (`make web-capture`), never hand-edited. `lib/article-core.mjs` is
+  plain JS shared by the build, `node --test` and the capture script.
+- `gateway/` — Go module `glasshouse/gateway`, stdlib only. Sign-in
+  (GitHub/Google), one lab per reader via `docker compose` on dind, a narrow
+  proxy to that lab's Inspector. `gateway/README.md` has the API and limits.
+- `deploy/` — dind + gateway + Caddy in one network namespace.
 - `Makefile` — the entry point. Run `make help`.
 
 Not built yet (deferred): the Postgres replication adapter (3c), and
@@ -44,6 +54,10 @@ progress; see `docs/superpowers/specs/2026-10-04-website-design.md`.
   both in one snapshot, no mode switch.
 - `sh adapters/postgres/demo.sh` — before/after snapshot around an insert.
 - `make site-build` — build the static articles into `site/dist`.
+- `make web-capture` / `make web-build` / `make web-test` — hosted site.
+  Capture restarts the local stack on a fresh volume once per article.
+- `make gateway-integration` — one real lab through Docker.
+- `make deploy-up` — hosted stack from `deploy/.env`.
 
 ## Security rules (non-negotiable)
 
@@ -64,6 +78,20 @@ progress; see `docs/superpowers/specs/2026-10-04-website-design.md`.
 - Compose is never run from the browser. The Inspector has no Docker access;
   the reader starts the lab in their own terminal.
 
+## Hosted-lab rules (gateway/, deploy/)
+
+- The gateway binds loopback only (`gateway.ValidateAddr`). Caddy and the
+  gateway run with `network_mode: service:dind`, because lab networks
+  exist only in dind's namespace.
+- Every non-GET request needs the exact public `Origin` and
+  `X-Glasshouse-Action: 1`; Host must be the public host. No CORS headers.
+- The proxy sends a lab nothing from the reader: no cookies, Origin or
+  body. It sends `Host: localhost:8765`, which the Inspector already allows.
+- Lab names are generated (`lab-<12 hex>`, checked by regex before any
+  `docker` call), never taken from a request. Docker commands get a
+  minimal env (`lab.DockerEnv`), never the gateway's secrets.
+- Only actions in the lab's own `/health` list are forwarded.
+
 ## Gotchas we already hit
 
 - pageinspect's raw-page functions refuse non-superusers even with EXECUTE.
@@ -76,6 +104,12 @@ progress; see `docs/superpowers/specs/2026-10-04-website-design.md`.
   `compose.yml`.
 - `page_header()` returns `pagesize`, but the Go JSON tag is `page_size`.
 - The init script runs only on a fresh volume. Use `down -v` after changes to it.
+- The `docker:dind` image opens unauthenticated `tcp://0.0.0.0:2375` when
+  `DOCKER_TLS_CERTDIR` is empty. Start it with `command: ["dockerd", ...]`
+  so the entrypoint adds no default listeners.
+- `docker compose` interpolates the base `compose.yml` before applying
+  overrides, so `GLASSHOUSE_INSPECTOR_CONTEXT` must be set (to anything) even
+  when `lab.override.yml` resets `build`.
 - `go fmt` rewrites files. Use `gofmt -l` for checks.
 - `pkill -f <pattern>` can match its own shell and exit 144. Use `pkill -x`
   or a bracketed pattern such as `[h]ttp.server`.

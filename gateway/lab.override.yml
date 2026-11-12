@@ -1,0 +1,38 @@
+# Applied on top of the unchanged adapters/postgres/compose.yml for every
+# hosted lab (gateway/internal/lab/compose.go). Started against the lab
+# Docker daemon only; never published to the host.
+#
+# - Prebuilt images, pre-pulled at deploy time: a lab start never pulls.
+# - No published ports: the gateway reaches the Inspector by container IP.
+# - An internal network per lab: no egress, no route to other labs.
+# - Hard limits, measured on a fresh lab (see gateway/README.md).
+# - The glasshouse.lab label lets the gateway remove orphans on restart.
+services:
+  inspector:
+    build: !reset null
+    image: ${GLASSHOUSE_INSPECTOR_IMAGE:-glasshouse-inspector:latest}
+    ports: !reset []
+    labels:
+      glasshouse.lab: "1"
+    mem_limit: 64m
+    cpus: 0.25
+    pids_limit: 64
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+
+  postgres:
+    image: ${GLASSHOUSE_POSTGRES_IMAGE:-postgres:17-alpine}
+    ports: !reset []
+    labels:
+      glasshouse.lab: "1"
+    mem_limit: 256m
+    cpus: 0.5
+    pids_limit: 128
+    security_opt: ["no-new-privileges:true"]
+
+networks:
+  default:
+    internal: true
+    labels:
+      glasshouse.lab: "1"

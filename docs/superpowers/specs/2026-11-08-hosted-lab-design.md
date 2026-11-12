@@ -1,7 +1,7 @@
 # Glasshouse Hosted Lab: design
 
 Date: 2026-11-08
-Status: draft for review
+Status: built (frontend, gateway, deploy stack); see "Review" and "Built" at the end
 
 ## Intent
 
@@ -240,8 +240,9 @@ build follows. Each overrides the text above where they disagree.
    `GET /api/lab/snapshot`, and `GET /api/lab` returns lab status plus the
    Inspector's action list (from `/health`).
 4. **Idle must not count an open stream.** A forgotten tab would keep a lab
-   forever. Idle is time since the last action or snapshot fetch (15 min), and
-   every lab has a hard lifetime cap (60 min).
+   forever. Idle is time since the last action (15 min); snapshot fetches do
+   not count, since the live view refetches on every event. Every lab also
+   has a hard lifetime cap (60 min).
 5. **`update_rows` and `delete_rows` pick random rows; payloads are random.**
    A CI re-capture would differ on every run. Resolution: article text quotes
    only layout values from deterministic steps (line pointer offsets, ctids of
@@ -266,3 +267,23 @@ build follows. Each overrides the text above where they disagree.
 10. **Toolchain:** this machine has Node 18, so the frontend uses Next 15
     (Next 16 needs Node 20). The gateway is a separate stdlib-only Go module.
 11. **Existing drift, fixed in passing:** `site/actions.txt` lacks `vacuum`.
+
+## Built (2026-11-12)
+
+- `web/`: Next.js 15 static export. `make web-capture` records one real
+  snapshot per article step; `make web-build` refuses unknown actions, steps
+  without a snapshot, and steps out of section order. Two articles so far:
+  heap page and index page.
+- `gateway/`: stdlib-only Go. Run `make test` for the unit tests and
+  `make gateway-integration` to start one real lab through Docker. The
+  operator guide, limits and isolation notes are in `gateway/README.md`.
+- `deploy/`: dind, gateway and Caddy in one network namespace. Tested
+  locally end to end: sign-in cookie, start (about 11 s), actions, live
+  diagram, stop, and isolation probes from inside a lab.
+- Also found while building: the dind image opens an unauthenticated
+  `tcp://0.0.0.0:2375` by default when TLS is off. `deploy/compose.yml`
+  starts `dockerd` directly to prevent it.
+
+Not done yet: real OAuth apps and a domain (owner), CI for the gateway and
+web builds and the VPS deploy, the CI re-capture check (finding 5), the
+running-queries article in the hosted site, and sysbox hardening.

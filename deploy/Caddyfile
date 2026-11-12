@@ -1,0 +1,24 @@
+# One origin: the static site export, plus the gateway for /api and /auth.
+# Caddy keeps the reader's Host and Origin headers, which the gateway checks.
+{$GLASSHOUSE_SITE_ADDRESS} {
+	encode zstd gzip
+
+	@gateway path /api/* /auth/*
+	handle @gateway {
+		# flush_interval -1 streams the lab's SSE events without buffering.
+		reverse_proxy 127.0.0.1:8080 {
+			flush_interval -1
+		}
+	}
+
+	handle {
+		root * /srv/site
+		file_server
+	}
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy same-origin
+		-Server
+	}
+}
