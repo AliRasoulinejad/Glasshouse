@@ -55,6 +55,7 @@ progress; see `docs/superpowers/specs/2026-10-04-website-design.md`.
 - `sh adapters/postgres/demo.sh` — before/after snapshot around an insert.
 - `make site-build` — build the static articles into `site/dist`.
 - `make web-capture` / `make web-build` / `make web-test` — hosted site.
+  `make web-browser-test` runs the built site in Chrome (`web/browser-tests/`).
   Capture restarts the local stack on a fresh volume once per article.
 - `make gateway-integration` — one real lab through Docker.
 - `make deploy-up` — hosted stack from `deploy/.env`.
@@ -110,6 +111,10 @@ progress; see `docs/superpowers/specs/2026-10-04-website-design.md`.
 - `docker compose` interpolates the base `compose.yml` before applying
   overrides, so `GLASSHOUSE_INSPECTOR_CONTEXT` must be set (to anything) even
   when `lab.override.yml` resets `build`.
+- An `IntersectionObserver` never reports a `display: none` element, so a
+  lazy box must keep a size while empty (`.inline-diagram` has a
+  `min-height`; an `:empty { display: none }` rule broke every inline
+  diagram on narrow screens).
 - `go fmt` rewrites files. Use `gofmt -l` for checks.
 - `pkill -f <pattern>` can match its own shell and exit 144. Use `pkill -x`
   or a bracketed pattern such as `[h]ttp.server`.

@@ -262,8 +262,10 @@ a { color: var(--accent); }
     border: 1px solid var(--line);
     border-radius: var(--radius);
     overflow-x: auto;
+    /* Never display:none while empty: a hidden box never intersects, so the
+       IntersectionObserver that loads its snapshot would never fire. */
+    min-height: 120px;
   }
-  .inline-diagram:empty { display: none; }
 }
 
 .lab {
