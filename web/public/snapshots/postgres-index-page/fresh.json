@@ -1,0 +1,117 @@
+{
+ "schema_version": 1,
+ "snapshot": {
+  "type": "postgres.heap_and_index",
+  "source": "postgres",
+  "seq": 0,
+  "timestamp": "2026-11-12T14:34:03.278791375Z",
+  "data": {
+   "relation": "glasshouse_demo",
+   "heap": {
+    "relation": "glasshouse_demo",
+    "pages": [
+     {
+      "block": 0,
+      "header": {
+       "lsn": "0/192E1C8",
+       "checksum": 0,
+       "flags": 0,
+       "lower": 36,
+       "upper": 8000,
+       "special": 8192,
+       "page_size": 8192,
+       "version": 4,
+       "prune_xid": "0"
+      },
+      "free_space": 7964,
+      "items": [
+       {
+        "lp": 1,
+        "lp_off": 8128,
+        "lp_flags": 1,
+        "lp_len": 61,
+        "t_xmin": "743",
+        "t_xmax": "0",
+        "t_ctid": "(0,1)",
+        "t_infomask2": 2,
+        "t_infomask": 2306,
+        "t_hoff": 24,
+        "t_bits": "",
+        "t_data_hex": "01000000436334636134323338613062",
+        "id": 1,
+        "payload": "c4ca4238a0b923820dcc509a6f75849b"
+       },
+       {
+        "lp": 2,
+        "lp_off": 8064,
+        "lp_flags": 1,
+        "lp_len": 61,
+        "t_xmin": "743",
+        "t_xmax": "0",
+        "t_ctid": "(0,2)",
+        "t_infomask2": 2,
+        "t_infomask": 2306,
+        "t_hoff": 24,
+        "t_bits": "",
+        "t_data_hex": "02000000436338316537323864396434",
+        "id": 2,
+        "payload": "c81e728d9d4c2f636f067f89cc14862c"
+       },
+       {
+        "lp": 3,
+        "lp_off": 8000,
+        "lp_flags": 1,
+        "lp_len": 61,
+        "t_xmin": "743",
+        "t_xmax": "0",
+        "t_ctid": "(0,3)",
+        "t_infomask2": 2,
+        "t_infomask": 2306,
+        "t_hoff": 24,
+        "t_bits": "",
+        "t_data_hex": "03000000436563636263383765346235",
+        "id": 3,
+        "payload": "eccbc87e4b5ce2fe28308fd9f2a7baf3"
+       }
+      ]
+     }
+    ]
+   },
+   "index": {
+    "index_name": "glasshouse_demo_payload_idx",
+    "pages": [
+     {
+      "block": 1,
+      "level": 0,
+      "type": "root",
+      "items": [
+       {
+        "itemoffset": 1,
+        "ctid": "(0,1)",
+        "data_hex": "63 34 63 61 34 32 33 38 61 30 62 39 32 33 38 32",
+        "dead": false,
+        "value": "c4ca4238a0b923820dcc509a6f75849b"
+       },
+       {
+        "itemoffset": 2,
+        "ctid": "(0,2)",
+        "data_hex": "63 38 31 65 37 32 38 64 39 64 34 63 32 66 36 33",
+        "dead": false,
+        "value": "c81e728d9d4c2f636f067f89cc14862c"
+       },
+       {
+        "itemoffset": 3,
+        "ctid": "(0,3)",
+        "data_hex": "65 63 63 62 63 38 37 65 34 62 35 63 65 32 66 65",
+        "dead": false,
+        "value": "eccbc87e4b5ce2fe28308fd9f2a7baf3"
+       }
+      ]
+     }
+    ],
+    "truncated": false
+   },
+   "queries": []
+  }
+ }
+}

@@ -670,7 +670,7 @@ func (a *Adapter) Actions() map[string]adapter.Action {
 				if err != nil {
 					return nil, err
 				}
-				return map[string]any{"rows_inserted": tag.RowsAffected()}, nil
+				return map[string]any{"rows_inserted": tag.RowsAffected(), "tag": tag.String()}, nil
 			},
 		},
 		"update_rows": {
@@ -693,7 +693,7 @@ func (a *Adapter) Actions() map[string]adapter.Action {
 				if err != nil {
 					return nil, err
 				}
-				return map[string]any{"rows_updated": tag.RowsAffected()}, nil
+				return map[string]any{"rows_updated": tag.RowsAffected(), "tag": tag.String()}, nil
 			},
 		},
 		"delete_rows": {
@@ -715,7 +715,7 @@ func (a *Adapter) Actions() map[string]adapter.Action {
 				if err != nil {
 					return nil, err
 				}
-				return map[string]any{"rows_deleted": tag.RowsAffected()}, nil
+				return map[string]any{"rows_deleted": tag.RowsAffected(), "tag": tag.String()}, nil
 			},
 		},
 		"vacuum": {
@@ -726,10 +726,11 @@ func (a *Adapter) Actions() map[string]adapter.Action {
 				if err != nil {
 					return nil, err
 				}
-				if _, err := pool.Exec(ctx, `VACUUM glasshouse_demo`); err != nil {
+				tag, err := pool.Exec(ctx, `VACUUM glasshouse_demo`)
+				if err != nil {
 					return nil, err
 				}
-				return map[string]any{"vacuumed": true}, nil
+				return map[string]any{"vacuumed": true, "tag": tag.String()}, nil
 			},
 		},
 		"vacuum_full": {
@@ -740,10 +741,11 @@ func (a *Adapter) Actions() map[string]adapter.Action {
 				if err != nil {
 					return nil, err
 				}
-				if _, err := pool.Exec(ctx, `VACUUM (FULL) glasshouse_demo`); err != nil {
+				tag, err := pool.Exec(ctx, `VACUUM (FULL) glasshouse_demo`)
+				if err != nil {
 					return nil, err
 				}
-				return map[string]any{"vacuumed": true}, nil
+				return map[string]any{"vacuumed": true, "tag": tag.String()}, nil
 			},
 		},
 		"hold_lock": {
@@ -785,7 +787,7 @@ func (a *Adapter) Actions() map[string]adapter.Action {
 				if err != nil {
 					return nil, err
 				}
-				return map[string]any{"rows_updated": tag.RowsAffected()}, nil
+				return map[string]any{"rows_updated": tag.RowsAffected(), "tag": tag.String()}, nil
 			},
 		},
 		"try_update_nowait": {
@@ -802,7 +804,7 @@ func (a *Adapter) Actions() map[string]adapter.Action {
 				if err != nil {
 					return nil, err
 				}
-				return map[string]any{"rows_updated": tag.RowsAffected()}, nil
+				return map[string]any{"rows_updated": tag.RowsAffected(), "tag": tag.String()}, nil
 			},
 		},
 		"long_scan": {
@@ -813,10 +815,11 @@ func (a *Adapter) Actions() map[string]adapter.Action {
 				if err != nil {
 					return nil, err
 				}
-				if _, err := pool.Exec(ctx, `SELECT pg_sleep(15)`); err != nil {
+				tag, err := pool.Exec(ctx, `SELECT pg_sleep(15)`)
+				if err != nil {
 					return nil, err
 				}
-				return map[string]any{"slept_seconds": 15}, nil
+				return map[string]any{"slept_seconds": 15, "tag": tag.String()}, nil
 			},
 		},
 	}

@@ -8,6 +8,9 @@
 #   make run-postgres start the Inspector on the host instead (stop the stack first: same port)
 #   make demo         before/after snapshot around an insert (needs the stack or run-postgres)
 #   make site-build   build the static articles into site/dist (validates lab actions)
+#   make web-capture  re-capture the hosted articles' step snapshots from a fresh stack
+#   make web-build    build the hosted (Next.js) site into web/out
+#   make web-test     typecheck and test the hosted site
 #
 # Go runs on the host by default. If Go is not installed, use Docker:
 #   make test USE_DOCKER=1
@@ -39,7 +42,7 @@ else
   GOFMT_SITE = gofmt
 endif
 
-.PHONY: help test vet fmt-check fmt build run-mock run-postgres stack-up stack-down stack-restart stack-logs demo site-actions site-build site-fmt-check site-vet clean
+.PHONY: help test vet fmt-check fmt build run-mock run-postgres stack-up stack-down stack-restart stack-logs demo site-actions site-build site-fmt-check site-vet web-deps web-capture web-build web-test clean
 
 help:
 	@grep -E '^#   make ' Makefile | sed 's/^#   //'
@@ -111,6 +114,25 @@ site-actions:
 site-build: site-actions
 	cd $(SITE_DIR) && $(GO_SITE) run ./cmd/build -articles articles -out dist -actions actions.txt
 	@echo "site built in site/dist"
+
+# ---- hosted site (web/) ------------------------------------------------------
+
+WEB_DIR := web
+
+web-deps:
+	cd $(WEB_DIR) && npm ci
+
+# Restarts the local stack on a fresh volume once per article; stop any
+# other path on :8765 first.
+web-capture: site-actions
+	cd $(WEB_DIR) && node scripts/capture.mjs
+
+web-build: site-actions
+	cd $(WEB_DIR) && npx next build
+	@echo "hosted site built in web/out"
+
+web-test: site-actions
+	cd $(WEB_DIR) && npx tsc --noEmit && node --test scripts/
 
 # ---- misc -------------------------------------------------------------------
 

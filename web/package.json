@@ -1,0 +1,23 @@
+{
+  "name": "glasshouse-web",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test scripts/*.test.mjs",
+    "capture": "node scripts/capture.mjs"
+  },
+  "dependencies": {
+    "marked": "16.4.1",
+    "next": "15.5.29",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "yaml": "2.9.1"
+  },
+  "devDependencies": {
+    "@types/node": "20.19.24",
+    "@types/react": "19.2.2",
+    "typescript": "5.9.3"
+  }
+}
