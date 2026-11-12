@@ -11,6 +11,7 @@
 #   make web-capture  re-capture the hosted articles' step snapshots from a fresh stack
 #   make web-build    build the hosted (Next.js) site into web/out
 #   make web-test     typecheck and test the hosted site
+#   make web-browser-test   Chrome tests of the built site (scroll panel, narrow screens)
 #   make gateway-integration   start and remove one real lab through Docker
 #   make deploy-up    build and start the hosted stack (deploy/.env), load lab images
 #   make deploy-down  stop the hosted stack (labs die with it)
@@ -50,7 +51,7 @@ else
   GOFMT_GW  = gofmt
 endif
 
-.PHONY: help test vet fmt-check fmt build run-mock run-postgres stack-up stack-down stack-restart stack-logs demo site-actions site-build site-fmt-check site-vet web-deps web-capture web-build web-test gateway-fmt-check gateway-vet gateway-integration inspector-image deploy-up deploy-images deploy-down clean
+.PHONY: help test vet fmt-check fmt build run-mock run-postgres stack-up stack-down stack-restart stack-logs demo site-actions site-build site-fmt-check site-vet web-deps web-capture web-build web-test web-browser-test gateway-fmt-check gateway-vet gateway-integration inspector-image deploy-up deploy-images deploy-down clean
 
 help:
 	@grep -E '^#   make ' Makefile | sed 's/^#   //'
@@ -150,6 +151,10 @@ web-build: site-actions
 
 web-test: site-actions
 	cd $(WEB_DIR) && npx tsc --noEmit && node --test scripts/
+
+# Needs Chrome (CHROME=/path overrides /usr/bin/google-chrome).
+web-browser-test: web-build
+	cd $(WEB_DIR) && node --test browser-tests/
 
 # ---- hosted gateway (gateway/, deploy/) -------------------------------------
 

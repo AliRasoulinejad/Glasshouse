@@ -284,6 +284,10 @@ build follows. Each overrides the text above where they disagree.
   `tcp://0.0.0.0:2375` by default when TLS is off. `deploy/compose.yml`
   starts `dockerd` directly to prevent it.
 
-Not done yet: real OAuth apps and a domain (owner), CI for the gateway and
-web builds and the VPS deploy, the CI re-capture check (finding 5), the
+CI (`.github/workflows/ci.yml`) runs the Go tests, the web unit and browser
+tests (wide-screen scroll panel, 390px and 768px inline diagrams), one
+real lab through Docker, and the deploy image builds.
+
+Not done yet: real OAuth apps and a domain (owner), the VPS deploy pipeline
+(needs a host and secrets), pushing images to a registry, the CI re-capture check (finding 5), the
 running-queries article in the hosted site, and sysbox hardening.
